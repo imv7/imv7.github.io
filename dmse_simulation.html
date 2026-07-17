@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMSE — Multi-Source Content Display Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0e17;--surface:#111827;--surface2:#1a2236;--border:#252f45;
+--text:#e2e8f0;--dim:#6b7a99;--accent:#3b82f6;
+--freq-a:#f59e0b;--freq-b:#10b981;--freq-c:#8b5cf6;--freq-d:#ef4444;--freq-e:#06b6d4;
+--glass:rgba(17,24,39,.85);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+.app{display:grid;grid-template-columns:320px 1fr 300px;grid-template-rows:56px 1fr 180px;height:100vh;gap:1px;background:var(--border)}
+.app>*{background:var(--bg)}
+
+/* Header */
+.header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.header h1{font-size:15px;font-weight:700;letter-spacing:.5px;color:var(--text)}
+.header h1 span{color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:600}
+.header-meta{display:flex;gap:20px;font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.header-meta .live{color:#10b981}
+.header-meta .live::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;margin-right:6px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Left Panel — Users */
+.panel-left{padding:16px;overflow-y:auto;border-right:1px solid var(--border)}
+.panel-title{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:12px;font-weight:700}
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;transition:all .3s}
+.user-card.active{border-color:var(--accent);box-shadow:0 0 20px rgba(59,130,246,.1)}
+.user-card-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.user-name{font-size:13px;font-weight:600}
+.user-state{font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 6px;border-radius:4px;background:var(--surface2);color:var(--dim)}
+.user-state.detecting{color:var(--freq-a);background:rgba(245,158,11,.1)}
+.user-state.authenticating{color:var(--accent);background:rgba(59,130,246,.1)}
+.user-state.selecting{color:var(--freq-c);background:rgba(139,92,246,.1)}
+.user-state.streaming{color:var(--freq-b);background:rgba(16,185,129,.1)}
+.user-state.leaving{color:var(--freq-d);background:rgba(239,68,68,.1)}
+.user-meta{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace;line-height:1.6}
+.user-meta b{color:var(--text);font-weight:600}
+.freq-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+/* Center — Simulation Canvas */
+.canvas-wrap{position:relative;overflow:hidden}
+canvas#sim{width:100%;height:100%;display:block}
+
+/* Right Panel — Processes */
+.panel-right{padding:16px;overflow-y:auto;border-left:1px solid var(--border)}
+.process-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px}
+.process-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.process-id{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+.process-freq{font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:10px;color:#fff}
+.process-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:6px}
+.process-bar-fill{height:100%;border-radius:2px;transition:width .3s;animation:stream 2s infinite}
+@keyframes stream{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
+.process-viewers{font-size:11px;color:var(--dim);margin-top:6px}
+.process-content{font-size:11px;color:var(--text);margin-top:4px;font-weight:500}
+
+/* Bottom — Event Log */
+.log-panel{grid-column:1/-1;border-top:1px solid var(--border);padding:12px 24px;overflow-y:auto;display:flex;flex-direction:column}
+.log-panel .panel-title{flex-shrink:0;margin-bottom:8px}
+.log-entries{flex:1;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8}
+.log-entry{opacity:0;animation:fadeIn .3s forwards}
+@keyframes fadeIn{to{opacity:1}}
+.log-entry .ts{color:var(--dim);margin-right:8px}
+.log-entry .tag{padding:1px 6px;border-radius:3px;margin-right:6px;font-size:10px;font-weight:600}
+.tag-detect{background:rgba(245,158,11,.15);color:var(--freq-a)}
+.tag-auth{background:rgba(59,130,246,.15);color:var(--accent)}
+.tag-stream{background:rgba(16,185,129,.15);color:var(--freq-b)}
+.tag-freq{background:rgba(139,92,246,.15);color:var(--freq-c)}
+.tag-leave{background:rgba(239,68,68,.15);color:var(--freq-d)}
+.tag-vector{background:rgba(6,182,212,.15);color:var(--freq-e)}
+.tag-content{background:rgba(236,72,153,.15);color:#ec4899}
+
+/* Controls */
+.controls{position:absolute;bottom:12px;right:12px;display:flex;gap:8px;z-index:10}
+.btn{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Legend */
+.legend{position:absolute;top:12px;left:12px;background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;padding:10px 14px;z-index:10;font-size:10px}
+.legend-item{display:flex;align-items:center;gap:6px;margin-bottom:4px;color:var(--dim)}
+.legend-item:last-child{margin-bottom:0}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.legend-rect{width:10px;height:10px;border-radius:2px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <h1>DMSE <span>US 11,290,772 B2</span> — Multi-Source Content Display</h1>
+    <div class="header-meta">
+      <span class="live">SIMULATION ACTIVE</span>
+      <span id="clock">00:00:00</span>
+      <span id="userCount">0 users</span>
+    </div>
+  </header>
+
+  <section class="panel-left" id="userPanel">
+    <div class="panel-title">Detected Users</div>
+  </section>
+
+  <section class="canvas-wrap">
+    <canvas id="sim"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-rect" style="background:var(--accent)"></div> Display Device 118</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--freq-a)"></div> Sensor / Camera 204</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--freq-b)"></div> User Agent</div>
+      <div class="legend-item"><div class="legend-rect" style="background:var(--freq-c);opacity:.5"></div> Detection Zone</div>
+      <div class="legend-item"><div class="legend-rect" style="background:var(--freq-d);opacity:.3"></div> Frequency Link</div>
+    </div>
+    <div class="controls">
+      <button class="btn" onclick="spawnUser()">+ Spawn User</button>
+      <button class="btn" onclick="togglePause()">Pause / Resume</button>
+    </div>
+  </section>
+
+  <section class="panel-right" id="processPanel">
+    <div class="panel-title">Active Processes</div>
+  </section>
+
+  <div class="log-panel">
+    <div class="panel-title">Event Log — DMSE Engine</div>
+    <div class="log-entries" id="logEntries"></div>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────
+// DMSE Simulation Engine
+// Patent US 11,290,772 B2 — Simulation
+// ──────────────────────────────────────────
+
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+let W, H;
+let paused = false;
+let simTime = 0;
+
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  canvas.width = r.width * devicePixelRatio;
+  canvas.height = r.height * devicePixelRatio;
+  W = r.width; H = r.height;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Colors
+const FREQ_COLORS = ['#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316'];
+const CONTENT_TYPES = [
+  {name:'Live Sports',icon:'⚽',color:'#10b981'},
+  {name:'News Broadcast',icon:'📰',color:'#3b82f6'},
+  {name:'Movie Stream',icon:'🎬',color:'#8b5cf6'},
+  {name:'Video Game',icon:'🎮',color:'#ef4444'},
+  {name:'Music Video',icon:'🎵',color:'#ec4899'},
+  {name:'Documentary',icon:'🌍',color:'#06b6d4'},
+  {name:'Cooking Show',icon:'🍳',color:'#f59e0b'},
+  {name:'Cartoon',icon:'🧸',color:'#f97316'},
+];
+
+const USER_NAMES = ['Alice','Bob','Carlos','Diana','Erik','Fiona','Gustavo','Hana','Igor','Julia','Kenji','Luna','Marco','Nina','Oscar','Priya'];
+const RECEIVER_TYPES = ['Smart Glasses 255','VR Headset 257','AR Device 259'];
+
+// ── Display Device (center) ──
+const display = { x: 0, y: 0, w: 140, h: 90 };
+function updateDisplayPos() {
+  display.x = W / 2;
+  display.y = H / 2 - 20;
+}
+
+// ── Sensor positions (around display) ──
+function getSensors() {
+  const cx = display.x, cy = display.y;
+  return [
+    { x: cx - 100, y: cy - 70, label: 'CAM 251', type: 'camera' },
+    { x: cx + 100, y: cy - 70, label: 'CAM 252', type: 'camera' },
+    { x: cx, y: cy + 80, label: 'BIO 253', type: 'biometric' },
+  ];
+}
+
+// Detection zone radius
+const DETECT_RADIUS = 180;
+
+// ── User Agents ──
+let users = [];
+let nextUserId = 1;
+let processes = {};
+let nextProcessId = 1;
+let logBuffer = [];
+
+const STATES = {
+  APPROACHING: 'approaching',
+  DETECTING: 'detecting',
+  AUTHENTICATING: 'authenticating',
+  SELECTING: 'selecting',
+  STREAMING: 'streaming',
+  SWITCHING: 'switching',
+  LEAVING: 'leaving',
+  GONE: 'gone',
+};
+
+class UserAgent {
+  constructor(id, name, startX, startY) {
+    this.id = id;
+    this.name = name;
+    this.x = startX;
+    this.y = startY;
+    this.targetX = display.x + (Math.random() - .5) * 200;
+    this.targetY = display.y + (Math.random() - .5) * 120 + 40;
+    this.vx = 0;
+    this.vy = 0;
+    this.speed = .6 + Math.random() * .8;
+    this.state = STATES.APPROACHING;
+    this.stateTimer = 0;
+    this.color = FREQ_COLORS[id % FREQ_COLORS.length];
+    this.receiver = RECEIVER_TYPES[Math.floor(Math.random() * RECEIVER_TYPES.length)];
+    this.contentIdx = -1;
+    this.processId = null;
+    this.freqHz = null;
+    this.freqColor = null;
+    this.authenticated = false;
+    this.trail = [];
+    this.wanderAngle = Math.random() * Math.PI * 2;
+    this.decisionCountdown = 0;
+    this.lifetime = 800 + Math.random() * 2000; // frames before considering leaving
+    this.switchCountdown = 0;
+    this.radius = 8;
+  }
+
+  distToDisplay() {
+    return Math.hypot(this.x - display.x, this.y - display.y);
+  }
+
+  update(dt) {
+    this.stateTimer += dt;
+    this.lifetime -= dt;
+
+    // Trail
+    if (this.state !== STATES.GONE) {
+      this.trail.push({ x: this.x, y: this.y, age: 0 });
+      if (this.trail.length > 30) this.trail.shift();
+      this.trail.forEach(t => t.age += dt);
+    }
+
+    switch (this.state) {
+      case STATES.APPROACHING:
+        this.moveToward(this.targetX, this.targetY, this.speed);
+        // Add some wander
+        this.wanderAngle += (Math.random() - .5) * .1;
+        this.x += Math.cos(this.wanderAngle) * .3;
+        this.y += Math.sin(this.wanderAngle) * .3;
+        if (this.distToDisplay() < DETECT_RADIUS) {
+          this.state = STATES.DETECTING;
+          this.stateTimer = 0;
+          addLog('detect', `${this.name} entered detection zone — Sensor scanning`);
+        }
+        break;
+
+      case STATES.DETECTING:
+        this.moveToward(this.targetX, this.targetY, this.speed * .3);
+        if (this.stateTimer > 80) {
+          this.state = STATES.AUTHENTICATING;
+          this.stateTimer = 0;
+          addLog('auth', `${this.name} identified via ${this.receiver === 'Smart Glasses 255' ? 'facial recognition' : 'biometric sensor'}`);
+        }
+        break;
+
+      case STATES.AUTHENTICATING:
+        // Slight hover in place
+        this.x += Math.sin(simTime * .05 + this.id) * .15;
+        if (this.stateTimer > 100) {
+          this.authenticated = true;
+          this.state = STATES.SELECTING;
+          this.stateTimer = 0;
+          addLog('auth', `${this.name} authenticated — Profile loaded — Receiver: ${this.receiver}`);
+        }
+        break;
+
+      case STATES.SELECTING:
+        this.x += Math.sin(simTime * .03 + this.id) * .1;
+        if (this.stateTimer > 60) {
+          // Pick content
+          this.contentIdx = Math.floor(Math.random() * CONTENT_TYPES.length);
+          const content = CONTENT_TYPES[this.contentIdx];
+          // Assign process
+          const pid = 'PID-' + String(nextProcessId++).padStart(3, '0');
+          this.processId = pid;
+          const freqGHz = (30 + Math.random() * 270).toFixed(1);
+          this.freqHz = freqGHz;
+          this.freqColor = FREQ_COLORS[(nextProcessId) % FREQ_COLORS.length];
+          processes[pid] = {
+            id: pid,
+            content: content,
+            freq: freqGHz,
+            freqColor: this.freqColor,
+            viewers: [this.name],
+            active: true,
+            progress: 0,
+          };
+          this.state = STATES.STREAMING;
+          this.stateTimer = 0;
+          this.switchCountdown = 400 + Math.random() * 800;
+          addLog('content', `${this.name} selected "${content.name}" ${content.icon}`);
+          addLog('freq', `Process ${pid} assigned frequency ${freqGHz} GHz — Transmitting to ${this.receiver}`);
+          addLog('stream', `${pid} streaming to ${this.name} at ${freqGHz} GHz — No interference with other processes`);
+        }
+        break;
+
+      case STATES.STREAMING:
+        // Gently orbit display
+        const angle = Math.atan2(this.y - display.y, this.x - display.x);
+        const orbitSpeed = .003;
+        const r = this.distToDisplay();
+        const targetR = 90 + (this.id % 4) * 25;
+        this.x = display.x + Math.cos(angle + orbitSpeed) * (r + (targetR - r) * .02);
+        this.y = display.y + Math.sin(angle + orbitSpeed) * (r + (targetR - r) * .02);
+
+        // Update process progress
+        if (processes[this.processId]) {
+          processes[this.processId].progress = Math.min(100, processes[this.processId].progress + .15);
+        }
+
+        // Vector interaction: maybe switch content
+        this.switchCountdown -= dt;
+        if (this.switchCountdown <= 0 && Math.random() < .3) {
+          const oldContent = CONTENT_TYPES[this.contentIdx].name;
+          this.contentIdx = Math.floor(Math.random() * CONTENT_TYPES.length);
+          const newContent = CONTENT_TYPES[this.contentIdx];
+          if (processes[this.processId]) {
+            processes[this.processId].content = newContent;
+            processes[this.processId].progress = 0;
+          }
+          addLog('vector', `${this.name} switched content: "${oldContent}" → "${newContent.name}" ${newContent.icon}`);
+          this.switchCountdown = 400 + Math.random() * 600;
+        }
+
+        // Vector interaction: user-to-user proximity influence
+        users.forEach(other => {
+          if (other.id !== this.id && other.state === STATES.STREAMING) {
+            const d = Math.hypot(this.x - other.x, this.y - other.y);
+            if (d < 40 && Math.random() < .002) {
+              // One user influences the other to watch same content
+              this.contentIdx = other.contentIdx;
+              if (processes[this.processId]) {
+                processes[this.processId].content = CONTENT_TYPES[this.contentIdx];
+                processes[this.processId].progress = other.processId && processes[other.processId] ? processes[other.processId].progress : 0;
+              }
+              addLog('vector', `Proximity influence: ${this.name} joined ${other.name}'s content "${CONTENT_TYPES[this.contentIdx].name}"`);
+            }
+          }
+        });
+
+        // Consider leaving
+        if (this.lifetime <= 0 && Math.random() < .005) {
+          this.state = STATES.LEAVING;
+          this.stateTimer = 0;
+          if (processes[this.processId]) {
+            processes[this.processId].active = false;
+          }
+          addLog('leave', `${this.name} disconnecting — Process ${this.processId} released`);
+          // Pick exit point
+          const side = Math.floor(Math.random() * 4);
+          if (side === 0) { this.targetX = -50; this.targetY = Math.random() * H; }
+          else if (side === 1) { this.targetX = W + 50; this.targetY = Math.random() * H; }
+          else if (side === 2) { this.targetX = Math.random() * W; this.targetY = -50; }
+          else { this.targetX = Math.random() * W; this.targetY = H + 50; }
+        }
+        break;
+
+      case STATES.LEAVING:
+        this.moveToward(this.targetX, this.targetY, this.speed * 1.5);
+        if (this.x < -40 || this.x > W + 40 || this.y < -40 || this.y > H + 40) {
+          this.state = STATES.GONE;
+          addLog('leave', `${this.name} left the viewing area — Standby for re-detection`);
+        }
+        break;
+    }
+
+    // Clamp within bounds during active states (except leaving/gone)
+    if (this.state !== STATES.LEAVING && this.state !== STATES.GONE && this.state !== STATES.APPROACHING) {
+      this.x = Math.max(20, Math.min(W - 20, this.x));
+      this.y = Math.max(20, Math.min(H - 20, this.y));
+    }
+  }
+
+  moveToward(tx, ty, spd) {
+    const dx = tx - this.x;
+    const dy = ty - this.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 1) {
+      this.x += (dx / d) * spd;
+      this.y += (dy / d) * spd;
+    }
+  }
+
+  draw(ctx) {
+    if (this.state === STATES.GONE) return;
+
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = (1 - t.age / 60) * .15;
+      if (alpha > 0) {
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+        ctx.fill();
+      }
+    }
+
+    // Frequency link to display (while streaming)
+    if (this.state === STATES.STREAMING && this.freqColor) {
+      ctx.save();
+      ctx.setLineDash([4, 6]);
+      ctx.lineDashOffset = -simTime * .5;
+      ctx.strokeStyle = this.freqColor + '60';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(display.x, display.y);
+      ctx.stroke();
+      ctx.restore();
+
+      // Signal particles along link
+      const t = (simTime * .02 + this.id * .3) % 1;
+      const px = this.x + (display.x - this.x) * t;
+      const py = this.y + (display.y - this.y) * t;
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fillStyle = this.freqColor;
+      ctx.fill();
+    }
+
+    // Detection ring (when detecting)
+    if (this.state === STATES.DETECTING) {
+      const scanR = (this.stateTimer % 40) / 40 * 30;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, scanR, 0, Math.PI * 2);
+      ctx.strokeStyle = '#f59e0b40';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Auth ring
+    if (this.state === STATES.AUTHENTICATING) {
+      const progress = this.stateTimer / 100;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 14, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // User dot
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+    grad.addColorStop(0, this.color);
+    grad.addColorStop(1, this.color + '80');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#fff3';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius + 6, 0, Math.PI * 2);
+    const glow = ctx.createRadialGradient(this.x, this.y, this.radius, this.x, this.y, this.radius + 6);
+    glow.addColorStop(0, this.color + '30');
+    glow.addColorStop(1, this.color + '00');
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '10px "DM Sans"';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, this.x, this.y - 14);
+
+    // Content icon (while streaming)
+    if (this.state === STATES.STREAMING && this.contentIdx >= 0) {
+      ctx.font = '12px serif';
+      ctx.fillText(CONTENT_TYPES[this.contentIdx].icon, this.x + 14, this.y + 4);
+    }
+
+    // Receiver icon
+    if (this.state === STATES.STREAMING) {
+      ctx.fillStyle = '#6b7a9980';
+      ctx.font = '8px "JetBrains Mono"';
+      ctx.fillText(this.receiver.split(' ')[0], this.x, this.y + 22);
+    }
+  }
+}
+
+// ── Spawn ──
+function spawnUser() {
+  const id = nextUserId++;
+  const name = USER_NAMES[(id - 1) % USER_NAMES.length];
+  // Spawn from edges
+  let sx, sy;
+  const side = Math.floor(Math.random() * 4);
+  if (side === 0) { sx = -20; sy = Math.random() * H; }
+  else if (side === 1) { sx = W + 20; sy = Math.random() * H; }
+  else if (side === 2) { sx = Math.random() * W; sy = -20; }
+  else { sx = Math.random() * W; sy = H + 20; }
+  const u = new UserAgent(id, name, sx, sy);
+  users.push(u);
+  addLog('detect', `New presence approaching: ${name} (ID ${id})`);
+}
+
+// ── Logging ──
+function addLog(tag, msg) {
+  const now = new Date();
+  const ts = now.toTimeString().split(' ')[0];
+  logBuffer.push({ tag, msg, ts });
+  if (logBuffer.length > 100) logBuffer.shift();
+  renderLog();
+}
+
+function renderLog() {
+  const el = document.getElementById('logEntries');
+  const last10 = logBuffer.slice(-15);
+  el.innerHTML = last10.map(l => {
+    const tagClass = {detect:'tag-detect',auth:'tag-auth',stream:'tag-stream',freq:'tag-freq',leave:'tag-leave',vector:'tag-vector',content:'tag-content'}[l.tag] || 'tag-detect';
+    return `<div class="log-entry"><span class="ts">${l.ts}</span><span class="tag ${tagClass}">${l.tag.toUpperCase()}</span>${l.msg}</div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── UI Panels ──
+function renderUserPanel() {
+  const el = document.getElementById('userPanel');
+  const activeUsers = users.filter(u => u.state !== STATES.GONE);
+  document.getElementById('userCount').textContent = activeUsers.length + ' user' + (activeUsers.length !== 1 ? 's' : '');
+
+  let html = '<div class="panel-title">Detected Users</div>';
+  activeUsers.forEach(u => {
+    const stateClass = {
+      [STATES.APPROACHING]: '',
+      [STATES.DETECTING]: 'detecting',
+      [STATES.AUTHENTICATING]: 'authenticating',
+      [STATES.SELECTING]: 'selecting',
+      [STATES.STREAMING]: 'streaming',
+      [STATES.LEAVING]: 'leaving',
+    }[u.state] || '';
+    const content = u.contentIdx >= 0 ? CONTENT_TYPES[u.contentIdx] : null;
+    html += `
+      <div class="user-card ${u.state === STATES.STREAMING ? 'active' : ''}">
+        <div class="user-card-header">
+          <div class="user-avatar" style="background:${u.color}">${u.name[0]}</div>
+          <div>
+            <div class="user-name">${u.name}</div>
+            <span class="user-state ${stateClass}">${u.state}</span>
+          </div>
+        </div>
+        <div class="user-meta">
+          ${u.receiver ? `<div>A/V: <b>${u.receiver}</b></div>` : ''}
+          ${u.processId ? `<div>PID: <b>${u.processId}</b></div>` : ''}
+          ${u.freqHz ? `<div>Freq: <span class="freq-dot" style="background:${u.freqColor}"></span><b>${u.freqHz} GHz</b></div>` : ''}
+          ${content ? `<div>Content: <b>${content.icon} ${content.name}</b></div>` : ''}
+        </div>
+      </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderProcessPanel() {
+  const el = document.getElementById('processPanel');
+  const active = Object.values(processes).filter(p => p.active);
+  let html = '<div class="panel-title">Active Processes</div>';
+  active.forEach(p => {
+    html += `
+      <div class="process-card">
+        <div class="process-header">
+          <span class="process-id">${p.id}</span>
+          <span class="process-freq" style="background:${p.freqColor}">${p.freq} GHz</span>
+        </div>
+        <div class="process-content">${p.content.icon} ${p.content.name}</div>
+        <div class="process-viewers">Viewers: ${p.viewers.join(', ')}</div>
+        <div class="process-bar"><div class="process-bar-fill" style="width:${p.progress}%;background:${p.freqColor}"></div></div>
+      </div>`;
+  });
+  if (active.length === 0) {
+    html += '<div style="color:var(--dim);font-size:12px;text-align:center;padding:20px">No active processes.<br>Awaiting user connections.</div>';
+  }
+  el.innerHTML = html;
+}
+
+// ── Draw Scene ──
+function drawScene() {
+  ctx.clearRect(0, 0, W, H);
+  updateDisplayPos();
+
+  // Grid
+  ctx.strokeStyle = '#1a223620';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Detection zone
+  ctx.beginPath();
+  ctx.arc(display.x, display.y, DETECT_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = '#8b5cf608';
+  ctx.fill();
+  ctx.strokeStyle = '#8b5cf620';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Detection zone label
+  ctx.fillStyle = '#8b5cf640';
+  ctx.font = '9px "JetBrains Mono"';
+  ctx.textAlign = 'center';
+  ctx.fillText('DETECTION ZONE r=' + DETECT_RADIUS + 'px', display.x, display.y - DETECT_RADIUS - 6);
+
+  // Sensors
+  const sensors = getSensors();
+  sensors.forEach(s => {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fill();
+    // Scan beam
+    const beamAngle = Math.atan2(display.y - s.y, display.x - s.x);
+    const spread = .6;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.arc(s.x, s.y, 60, beamAngle - spread, beamAngle + spread);
+    ctx.closePath();
+    ctx.fillStyle = '#f59e0b08';
+    ctx.fill();
+    // Label
+    ctx.fillStyle = '#f59e0b80';
+    ctx.font = '8px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.label, s.x, s.y - 10);
+  });
+
+  // Display device
+  const dx = display.x - display.w / 2;
+  const dy = display.y - display.h / 2;
+
+  // Screen glow
+  ctx.save();
+  ctx.shadowColor = '#3b82f6';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = '#111827';
+  roundRect(ctx, dx, dy, display.w, display.h, 6);
+  ctx.fill();
+  ctx.restore();
+
+  // Screen border
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2;
+  roundRect(ctx, dx, dy, display.w, display.h, 6);
+  ctx.stroke();
+
+  // Screen content — show active content icons
+  const activeStreams = users.filter(u => u.state === STATES.STREAMING && u.contentIdx >= 0);
+  if (activeStreams.length > 0) {
+    const sliceW = display.w / Math.min(activeStreams.length, 4);
+    activeStreams.slice(0, 4).forEach((u, i) => {
+      const cx = dx + sliceW * i + sliceW / 2;
+      const cy = display.y;
+      ctx.fillStyle = CONTENT_TYPES[u.contentIdx].color + '30';
+      ctx.fillRect(dx + sliceW * i + 2, dy + 2, sliceW - 4, display.h - 4);
+      ctx.font = '18px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(CONTENT_TYPES[u.contentIdx].icon, cx, cy + 6);
+      ctx.font = '7px "JetBrains Mono"';
+      ctx.fillStyle = '#e2e8f080';
+      ctx.fillText(u.freqHz + 'G', cx, cy + 20);
+    });
+  } else {
+    ctx.fillStyle = '#3b82f630';
+    ctx.font = '10px "DM Sans"';
+    ctx.textAlign = 'center';
+    ctx.fillText('STANDBY', display.x, display.y + 4);
+  }
+
+  // Label
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '11px "JetBrains Mono"';
+  ctx.textAlign = 'center';
+  ctx.fillText('Display Device 118', display.x, dy - 10);
+
+  // DMSE label
+  ctx.fillStyle = '#6b7a99';
+  ctx.font = '8px "JetBrains Mono"';
+  ctx.fillText('DMSE 201', display.x, dy + display.h + 16);
+
+  // Users
+  users.forEach(u => u.draw(ctx));
+
+  // Frequency wave visualization at bottom of display
+  if (activeStreams.length > 0) {
+    activeStreams.forEach((u, i) => {
+      if (!u.freqColor) return;
+      ctx.beginPath();
+      const baseY = dy + display.h + 28 + i * 10;
+      ctx.moveTo(dx, baseY);
+      for (let px = 0; px < display.w; px += 2) {
+        const freq = parseFloat(u.freqHz) / 50;
+        ctx.lineTo(dx + px, baseY + Math.sin(px * freq * .1 + simTime * .1) * 3);
+      }
+      ctx.strokeStyle = u.freqColor + '60';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ── Auto-spawn ──
+let autoSpawnTimer = 0;
+function autoSpawn(dt) {
+  autoSpawnTimer += dt;
+  const activeCount = users.filter(u => u.state !== STATES.GONE).length;
+  if (autoSpawnTimer > 200 && activeCount < 6) {
+    autoSpawnTimer = 0;
+    if (Math.random() < .7) spawnUser();
+  }
+}
+
+// ── Main Loop ──
+let lastTime = performance.now();
+function loop(now) {
+  const dt = Math.min((now - lastTime) / 16.67, 3); // normalize to ~60fps
+  lastTime = now;
+
+  if (!paused) {
+    simTime += dt;
+    users.forEach(u => u.update(dt));
+    // Cleanup gone users after a while
+    users = users.filter(u => u.state !== STATES.GONE || u.stateTimer < 100);
+    autoSpawn(dt);
+  }
+
+  drawScene();
+
+  // Update clock
+  const secs = Math.floor(simTime / 60);
+  const mins = Math.floor(secs / 60);
+  const hrs = Math.floor(mins / 60);
+  document.getElementById('clock').textContent =
+    String(hrs).padStart(2,'0') + ':' + String(mins % 60).padStart(2,'0') + ':' + String(secs % 60).padStart(2,'0');
+
+  // Throttle panel updates
+  if (Math.floor(simTime) % 10 === 0) {
+    renderUserPanel();
+    renderProcessPanel();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+function togglePause() { paused = !paused; }
+
+// ── Boot ──
+addLog('stream', 'DMSE Engine initialized — Display Device 118 in standby mode');
+addLog('detect', 'Sensors CAM 251, CAM 252, BIO 253 online — Scanning for users');
+
+// Initial spawns staggered
+setTimeout(() => spawnUser(), 500);
+setTimeout(() => spawnUser(), 2000);
+setTimeout(() => spawnUser(), 4500);
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

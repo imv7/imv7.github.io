@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NOC — RL Script Selector (Visual)</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#06080c;--s1:#0a0e15;--s2:#10151e;--s3:#161d2a;--s4:#1e2738;
+--brd:#1a2233;--brd2:#253045;
+--t1:#d8dde8;--t2:#8694ab;--t3:#4d5a72;
+--g:#00e68a;--g2:#00c472;--b:#3d8bfd;--b2:#2970e0;
+--a:#ffb020;--r:#ff4757;--c:#00d4ff;--p:#b07aff;
+--mono:'IBM Plex Mono',monospace;--sans:'Instrument Sans',sans-serif;
+}
+html{font-size:12px}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:2px}::-webkit-scrollbar-track{background:transparent}
+
+.top{height:36px;background:var(--s1);border-bottom:1px solid var(--brd);display:flex;align-items:center;padding:0 1rem;gap:.8rem;flex-shrink:0}
+.top-logo{font-family:var(--mono);font-weight:700;font-size:.95rem;color:var(--g)}
+.sep{width:1px;height:16px;background:var(--brd)}
+.tstat{font-family:var(--mono);font-size:.6rem;color:var(--t3);display:flex;align-items:center;gap:.25rem}
+.tstat .v{font-weight:600}
+.tstat .v.ok{color:var(--g)}.tstat .v.w{color:var(--a)}.tstat .v.c{color:var(--r)}
+.top-r{margin-left:auto;display:flex;align-items:center;gap:.6rem}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--g);animation:lp 1.5s infinite}
+@keyframes lp{0%,100%{box-shadow:0 0 0 0 rgba(0,230,138,.5)}50%{box-shadow:0 0 0 4px rgba(0,230,138,0)}}
+.upt{font-family:var(--mono);font-size:.6rem;color:var(--t2)}
+
+.main{flex:1;display:grid;grid-template-columns:220px 1fr 220px;overflow:hidden}
+
+/* LEFT */
+.lcol{background:var(--s1);border-right:1px solid var(--brd);display:flex;flex-direction:column;overflow:hidden}
+.chdr{padding:.4rem .6rem;border-bottom:1px solid var(--brd);font-family:var(--mono);font-size:.55rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.chdr .ct{background:var(--s3);padding:1px 5px;border-radius:3px;font-size:.5rem;color:var(--t2)}
+
+.nd{padding:.4rem .6rem;border-bottom:1px solid var(--brd)}
+.nd-top{display:flex;align-items:center;gap:.35rem;margin-bottom:.25rem}
+.nd-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.nd-dot.ok{background:var(--g)}.nd-dot.warn{background:var(--a)}.nd-dot.crit{background:var(--r);animation:cp .7s infinite}
+@keyframes cp{0%,100%{opacity:1}50%{opacity:.3}}
+.nd-name{font-family:var(--mono);font-size:.6rem;font-weight:600;flex:1}
+.nd-type{font-size:.5rem;color:var(--t3);font-family:var(--mono)}
+.nd-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:.2rem}
+.mb{text-align:center}
+.mb-l{font-size:.45rem;color:var(--t3);font-family:var(--mono)}
+.mb-v{font-family:var(--mono);font-size:.6rem;font-weight:600}
+.mb-bar{height:2px;border-radius:1px;background:var(--s4);margin-top:1px;overflow:hidden}
+.mb-f{height:100%;border-radius:1px;transition:width .6s,background .3s}
+
+/* CENTER */
+.ccol{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+/* State Machine Canvas */
+.sm-wrap{position:relative;flex:1;min-height:0}
+#smCanvas{width:100%;height:100%;display:block}
+.sm-overlay{position:absolute;bottom:8px;left:8px;right:8px;display:flex;gap:6px;pointer-events:none}
+.sm-legend{font-family:var(--mono);font-size:.5rem;color:var(--t3);display:flex;align-items:center;gap:3px}
+.sm-legend .ld{width:8px;height:8px;border-radius:50%}
+
+/* Incident + Runners Panel */
+.bottom-panel{flex-shrink:0;background:var(--s1);border-top:1px solid var(--brd);max-height:45%;overflow-y:auto}
+.inc-bar{padding:.4rem .6rem;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:.5rem}
+.inc-sev{font-family:var(--mono);font-size:.45rem;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+.inc-sev.critical{background:rgba(255,71,87,.15);color:var(--r)}
+.inc-sev.high{background:rgba(255,176,32,.15);color:var(--a)}
+.inc-sev.medium{background:rgba(61,139,253,.15);color:var(--b)}
+.inc-title{font-family:var(--mono);font-size:.6rem;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inc-phase{font-family:var(--mono);font-size:.5rem;color:var(--t2)}
+.inc-time{font-family:var(--mono);font-size:.5rem;color:var(--t3)}
+
+/* Runner rows */
+.rn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.rn{padding:.5rem .6rem;border-bottom:1px solid var(--brd);border-right:1px solid var(--brd)}
+.rn.winner{background:rgba(0,230,138,.03)}
+.rn.loser{opacity:.5}
+.rn-top{display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem}
+.rn-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.rn-name{font-family:var(--mono);font-size:.6rem;font-weight:600;flex:1}
+.rn-score{font-family:var(--mono);font-size:.8rem;font-weight:700}
+.rn-state{font-family:var(--mono);font-size:.5rem;padding:1px 5px;border-radius:3px;background:var(--s3);color:var(--t2)}
+.rn-path{display:flex;align-items:center;gap:2px;flex-wrap:wrap;margin-top:.2rem}
+.rn-ps{font-family:var(--mono);font-size:.45rem;padding:1px 4px;border-radius:2px;background:var(--s3);color:var(--t3)}
+.rn-ps.cur{color:var(--b);border:1px solid var(--b);background:rgba(61,139,253,.08)}
+.rn-ps.pass{color:var(--g);border:1px solid var(--g)}
+.rn-ps.fail{color:var(--r);border:1px solid var(--r)}
+.rn-arr{font-size:.4rem;color:var(--t3)}
+.rn-rewards{display:flex;gap:2px;margin-top:.25rem;flex-wrap:wrap}
+.rn-rw{font-family:var(--mono);font-size:.45rem;padding:1px 4px;border-radius:2px;background:var(--s3)}
+.rn-bar{height:3px;border-radius:2px;background:var(--s4);margin-top:.25rem;overflow:hidden}
+.rn-bf{height:100%;border-radius:2px;transition:width .5s}
+
+/* Explanation overlay on state machine */
+.sm-explain{position:absolute;top:6px;left:6px;font-family:var(--mono);font-size:.5rem;color:var(--t3);max-width:260px;line-height:1.5;pointer-events:none}
+.sm-explain .hl{color:var(--a);font-weight:600}
+
+/* RIGHT */
+.rcol{background:var(--s1);border-left:1px solid var(--brd);display:flex;flex-direction:column;overflow:hidden}
+.vec{display:flex;align-items:center;gap:.35rem;padding:.35rem .5rem;margin:1px .3rem;border-radius:4px;border:1px solid transparent;background:transparent;cursor:pointer;transition:all .12s;color:var(--t2);font-size:.6rem;font-family:var(--sans);width:calc(100% - .6rem);text-align:left}
+.vec:hover{background:var(--s2);border-color:var(--brd2)}
+.vec:active{transform:scale(.97)}
+.vec.cd{opacity:.25;pointer-events:none}
+.vi{font-size:.8rem;width:16px;text-align:center;flex-shrink:0}
+.vn{font-weight:600;font-size:.6rem}
+.vd{font-family:var(--mono);font-size:.45rem;color:var(--t3);margin-top:1px}
+.vf{font-family:var(--mono);font-size:.45rem;color:var(--a);margin-left:auto;opacity:0;transition:opacity .1s}
+.vec:hover .vf{opacity:1}
+
+.logp{flex:1;overflow-y:auto;background:var(--bg);padding:.2rem .4rem;font-family:var(--mono);font-size:.5rem;line-height:1.6;border-top:1px solid var(--brd)}
+.le{animation:fi .15s ease}@keyframes fi{from{opacity:0}to{opacity:1}}
+.lt{color:var(--t3);margin-right:.3rem}.li{color:var(--b)}.lw{color:var(--a)}.lr{color:var(--r)}.ls{color:var(--g)}.lp{color:var(--p)}.lc{color:var(--c)}
+
+/* Bottom bar */
+.bbar{height:24px;background:var(--s1);border-top:1px solid var(--brd);display:flex;align-items:center;padding:0 .6rem;gap:.6rem;flex-shrink:0;overflow-x:auto}
+.bi{font-family:var(--mono);font-size:.5rem;color:var(--t3);white-space:nowrap;display:flex;align-items:center;gap:.2rem}
+.bi .bd{width:4px;height:4px;border-radius:50%}
+
+.toast-z{position:fixed;top:42px;right:10px;z-index:90;display:flex;flex-direction:column;gap:.25rem;pointer-events:none}
+.toast{font-family:var(--mono);font-size:.55rem;padding:.35rem .6rem;border-radius:4px;background:var(--s2);border:1px solid var(--brd);color:var(--t1);animation:tIn .2s ease;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+@keyframes tIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.toast.ts{border-color:var(--g);color:var(--g)}.toast.tw{border-color:var(--a);color:var(--a)}.toast.te{border-color:var(--r);color:var(--r)}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="top-logo">NOC RL</div><div class="sep"></div>
+  <div class="tstat">Nodes <span class="v ok" id="tN">8</span></div>
+  <div class="tstat">Healthy <span class="v ok" id="tH">8</span></div>
+  <div class="tstat">Incidents <span class="v" id="tI">0</span></div>
+  <div class="tstat">Resolved <span class="v ok" id="tR">0</span></div>
+  <div class="tstat">Failed <span class="v" id="tF">0</span></div>
+  <div class="tstat">Rate <span class="v ok" id="tRt">—</span></div>
+  <div class="top-r"><div class="upt" id="upt">00:00:00</div><div class="ldot"></div><span style="font-family:var(--mono);font-size:.5rem;color:var(--g)">LIVE</span></div>
+</div>
+
+<div class="main">
+  <div class="lcol">
+    <div class="chdr">Infrastructure <span class="ct">8 nodes</span></div>
+    <div style="flex:1;overflow-y:auto" id="infraList"></div>
+  </div>
+
+  <div class="ccol">
+    <div class="sm-wrap" id="smWrap">
+      <canvas id="smCanvas"></canvas>
+      <div class="sm-explain" id="smExplain">
+        State machine idle. Each script candidate becomes a <span class="hl">runner</span> that traverses states.
+        Transitions carry <span class="hl">reward penalties</span>. Best score wins.
+      </div>
+      <div class="sm-overlay">
+        <div class="sm-legend"><div class="ld" style="background:var(--b)"></div>Running</div>
+        <div class="sm-legend"><div class="ld" style="background:var(--a)"></div>Waiting</div>
+        <div class="sm-legend"><div class="ld" style="background:var(--g)"></div>Succeeded</div>
+        <div class="sm-legend"><div class="ld" style="background:var(--r)"></div>Failed</div>
+        <div class="sm-legend" style="margin-left:auto;color:var(--t3)">Reward penalties on edges</div>
+      </div>
+    </div>
+    <div class="bottom-panel" id="bottomPanel">
+      <div class="chdr">Active evaluation <span class="ct" id="rnCt">0 runners</span></div>
+      <div id="runnersArea" style="font-family:var(--mono);font-size:.55rem;color:var(--t3);padding:.6rem;text-align:center">No active incident</div>
+    </div>
+  </div>
+
+  <div class="rcol">
+    <div class="chdr">Chaos vectors</div>
+    <div style="flex-shrink:0;overflow-y:auto;max-height:40%" id="vecList"></div>
+    <div class="chdr">Event log</div>
+    <div class="logp" id="logArea"></div>
+  </div>
+</div>
+
+<div class="bbar" id="bbar"><div class="bi" style="color:var(--t2)">Timeline:</div></div>
+<div class="toast-z" id="toastZ"></div>
+
+<script>
+// ═══════════════════════════════════════
+// INFRA NODES
+// ═══════════════════════════════════════
+const NODES=[
+  {id:'w1',name:'web-prod-01',type:'nginx',cpu:32,mem:45,disk:42,conn:180,status:'ok'},
+  {id:'w2',name:'web-prod-02',type:'nginx',cpu:28,mem:40,disk:38,conn:165,status:'ok'},
+  {id:'a1',name:'api-prod-01',type:'node.js',cpu:55,mem:62,disk:35,conn:420,status:'ok'},
+  {id:'a2',name:'api-prod-02',type:'node.js',cpu:48,mem:58,disk:33,conn:390,status:'ok'},
+  {id:'d1',name:'db-primary',type:'postgres',cpu:40,mem:70,disk:55,conn:85,status:'ok'},
+  {id:'d2',name:'db-replica',type:'postgres',cpu:25,mem:55,disk:52,conn:40,status:'ok'},
+  {id:'c1',name:'cache-01',type:'redis',cpu:15,mem:78,disk:12,conn:950,status:'ok'},
+  {id:'q1',name:'queue-01',type:'rabbitmq',cpu:20,mem:35,disk:18,conn:220,status:'ok'},
+];
+const TARGETS={nginx:{cpu:30,mem:42,disk:40,conn:175},'node.js':{cpu:50,mem:60,disk:34,conn:400},postgres:{cpu:35,mem:65,disk:54,conn:70},redis:{cpu:14,mem:75,disk:12,conn:900},rabbitmq:{cpu:18,mem:32,disk:17,conn:200}};
+
+// ═══════════════════════════════════════
+// INCIDENT TEMPLATES
+// ═══════════════════════════════════════
+const ITPL=[
+  {trigger:n=>n.disk>90,sev:'critical',title:n=>`Disk full: ${n.name}`,crit:'Free ≥30% disk',met:'disk',
+   scripts:[
+     {name:'cleanup_old.sh',cmds:['df','find','rm','echo'],type:'sample'},
+     {name:'logrotate_force.sh',cmds:['logrotate','systemctl','df'],type:'sample'},
+     {name:'archive_zstd.sh',cmds:['du','find','tar','gzip','rm','df'],type:'found',sim:.84},
+     {name:'log_pruner.py',cmds:['du','find','truncate','rsync','df'],type:'found',sim:.71},
+   ],fix:n=>{n.disk=Math.max(20,n.disk-45+R()*15)}},
+  {trigger:n=>n.cpu>92,sev:'critical',title:n=>`CPU saturated: ${n.name}`,crit:'CPU <70%',met:'cpu',
+   scripts:[
+     {name:'kill_runaway.sh',cmds:['top','ps','kill','echo'],type:'sample'},
+     {name:'cpu_governor.py',cmds:['ps','nice','renice','systemctl'],type:'found',sim:.76},
+     {name:'autoscale_hpa.sh',cmds:['kubectl','curl','jq','echo'],type:'found',sim:.68},
+   ],fix:n=>{n.cpu=Math.max(25,n.cpu-50+R()*15)}},
+  {trigger:n=>n.mem>93,sev:'high',title:n=>`Memory pressure: ${n.name}`,crit:'Memory <75%',met:'mem',
+   scripts:[
+     {name:'jvm_restart.sh',cmds:['jmap','kill','systemctl','echo'],type:'sample'},
+     {name:'heap_dump.sh',cmds:['jmap','jcmd','tar','curl','systemctl'],type:'found',sim:.80},
+     {name:'gc_tune.sh',cmds:['jcmd','echo','curl'],type:'found',sim:.63},
+   ],fix:n=>{n.mem=Math.max(30,n.mem-40+R()*15)}},
+  {trigger:n=>n.conn<5&&n.type==='postgres',sev:'critical',title:n=>`Conn lost: ${n.name}`,crit:'Restore connections',met:'conn',
+   scripts:[
+     {name:'pg_reconnect.sh',cmds:['pg_isready','systemctl','psql'],type:'sample'},
+     {name:'failover.sh',cmds:['pg_isready','psql','curl','echo'],type:'found',sim:.78},
+     {name:'pool_reset.py',cmds:['psql','kill','systemctl','pg_isready'],type:'found',sim:.69},
+   ],fix:n=>{n.conn=Math.max(30,60+R()*40)}},
+  {trigger:n=>n.conn>1800&&n.type==='redis',sev:'high',title:n=>`Conn storm: ${n.name}`,crit:'Conns <1200',met:'conn',
+   scripts:[
+     {name:'conn_limit.sh',cmds:['redis-cli','iptables','echo'],type:'sample'},
+     {name:'client_cull.py',cmds:['redis-cli','grep','kill','echo'],type:'found',sim:.73},
+   ],fix:n=>{n.conn=Math.max(400,n.conn-1200+R()*200)}},
+];
+const CMAP={echo:'printf',cat:'bat',grep:'rg',gzip:'zstd',curl:'httpie',top:'htop',kill:'pkill',find:'fd'};
+
+// ═══════════════════════════════════════
+// STATE MACHINE
+// ═══════════════════════════════════════
+const SM=[
+  {id:'READY',   x:.07,y:.48,r:26,c:'#5e6882',label:'READY'},
+  {id:'RUNNING', x:.27,y:.18,r:30,c:'#3d8bfd',label:'RUNNING'},
+  {id:'WAITING', x:.27,y:.78,r:26,c:'#ffb020',label:'WAITING'},
+  {id:'COMPLETED',x:.52,y:.18,r:28,c:'#8694ab',label:'COMPLETED'},
+  {id:'TERMINATED',x:.52,y:.78,r:24,c:'#ff4757',label:'TERMINATED'},
+  {id:'SUCCEEDED',x:.78,y:.12,r:28,c:'#00e68a',label:'SUCCEEDED'},
+  {id:'FAILED',  x:.78,y:.85,r:28,c:'#ff4757',label:'FAILED'},
+];
+const EDGES=[
+  {f:'READY',t:'RUNNING',rw:-1},{f:'RUNNING',t:'COMPLETED',rw:-1},
+  {f:'RUNNING',t:'WAITING',rw:-2},{f:'WAITING',t:'RUNNING',rw:-1},
+  {f:'WAITING',t:'COMPLETED',rw:-1},{f:'WAITING',t:'TERMINATED',rw:-3},
+  {f:'COMPLETED',t:'SUCCEEDED',rw:-1},{f:'COMPLETED',t:'FAILED',rw:-9},
+  {f:'TERMINATED',t:'FAILED',rw:-9},
+];
+
+// RUNNER COLORS
+const RCOLORS=['#3d8bfd','#00e68a','#ffb020','#ff4757','#b07aff','#00d4ff','#ff6b9d','#ffd93d'];
+
+// VECTORS
+const VECS=[
+  {id:'lat',ic:'🕐',nm:'Latency spike',ds:'Wait bias +40%',fn:()=>eachR(r=>r.wb+=.4)},
+  {id:'oom',ic:'💥',nm:'OOM kill',ds:'Term chance +50%',fn:()=>eachR(r=>r.tb+=.5)},
+  {id:'ddos',ic:'🌊',nm:'DDoS wave',ds:'Spike all connections',fn:()=>NODES.forEach(n=>n.conn=Math.min(2500,n.conn+300+R()*400))},
+  {id:'dio',ic:'💾',nm:'Disk I/O storm',ds:'Disk +15% all nodes',fn:()=>NODES.forEach(n=>n.disk=Math.min(99,n.disk+10+R()*10))},
+  {id:'cpu',ic:'🔥',nm:'CPU burn',ds:'CPU +25% random nodes',fn:()=>pick(NODES,3).forEach(n=>n.cpu=Math.min(99,n.cpu+20+R()*15))},
+  {id:'mem',ic:'🧠',nm:'Memory leak',ds:'Mem +20% API nodes',fn:()=>NODES.filter(n=>n.type==='node.js').forEach(n=>n.mem=Math.min(99,n.mem+15+R()*10))},
+  {id:'net',ic:'🔌',nm:'Net partition',ds:'Drop DB connections',fn:()=>NODES.filter(n=>n.type==='postgres').forEach(n=>n.conn=Math.floor(R()*3))},
+  {id:'rec',ic:'🩹',nm:'Recovery',ds:'Reduce wait/fail -30%',fn:()=>eachR(r=>{r.wb=Math.max(.05,r.wb-.3);r.fb=Math.max(.05,r.fb-.25)})},
+  {id:'cool',ic:'❄️',nm:'Cooldown',ds:'Drop CPU/MEM 20%',fn:()=>NODES.forEach(n=>{n.cpu=Math.max(8,n.cpu-15-R()*10);n.mem=Math.max(15,n.mem-10-R()*10)})},
+  {id:'chaos',ic:'🎲',nm:'Chaos monkey',ds:'Random spike somewhere',fn:()=>{const n=pick(NODES,1)[0],m=pick(['cpu','mem','disk'],1)[0];n[m]=Math.min(99,n[m]+25+R()*20)}},
+];
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let incidents=[], resolved=[], incCtr=0, ticks=0, t0=Date.now();
+let gs={i:0,r:0,f:0};
+let canvas,ctx,cw,ch;
+let particles=[];  // animated dots on state machine
+let edgeFlashes=[]; // flash an edge when traversed
+let cooldowns={};
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+function init(){
+  renderInfra(); renderVecs();
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+  setInterval(tick,700);
+  setInterval(renderInfra,900);
+  setInterval(updateTop,1000);
+  requestAnimationFrame(drawLoop);
+  log('Infrastructure online. Monitoring thresholds.','s');
+  log('disk>90% · cpu>92% · mem>93% · conn<5(pg) · conn>1800(redis)','c');
+}
+
+// ═══════════════════════════════════════
+// TICK
+// ═══════════════════════════════════════
+function tick(){
+  ticks++;
+  driftMetrics();
+  checkThresh();
+  advanceAll();
+}
+
+function driftMetrics(){
+  NODES.forEach(n=>{
+    const tg=TARGETS[n.type]||{cpu:30,mem:40,disk:30,conn:100};
+    ['cpu','mem','disk'].forEach(m=>{n[m]=cl(n[m]+(tg[m]-n[m])*.02+(R()-.5)*4,1,99)});
+    n.conn=Math.max(0,Math.round(n.conn+(tg.conn-n.conn)*.03+(R()-.5)*30));
+    n.disk=cl(n.disk+.08+R()*.05,1,99);
+    const w=Math.max(n.cpu,n.mem,n.disk);
+    n.status=w>90?'crit':w>75?'warn':'ok';
+    if(n.type==='postgres'&&n.conn<10)n.status='crit';
+    if(n.type==='redis'&&n.conn>1600)n.status='warn';
+  });
+}
+
+function checkThresh(){
+  NODES.forEach(node=>{
+    if(incidents.some(i=>i.nid===node.id))return;
+    for(const t of ITPL){if(t.trigger(node)){spawnInc(node,t);break}}
+  });
+}
+
+// ═══════════════════════════════════════
+// INCIDENTS
+// ═══════════════════════════════════════
+function spawnInc(node,tpl){
+  incCtr++;gs.i++;
+  const id=`INC-${String(incCtr).padStart(3,'0')}`;
+  log(`🚨 ${id}: ${tpl.title(node)}`,'r');
+  toast(`🚨 ${id} ${tpl.title(node)}`,'e');
+
+  // optimize commands
+  const scripts=tpl.scripts.map(s=>{
+    let cmds=[...s.cmds],opt=false,oc=null;
+    for(let i=0;i<cmds.length;i++){if(CMAP[cmds[i]]){cmds[i]=CMAP[cmds[i]];opt=true}}
+    if(opt)oc=cmds;
+    return {...s,optimized:opt,optCmds:oc};
+  });
+  scripts.forEach((s,i)=>{
+    const tag=s.type==='sample'?'sample':'found';
+    log(`  [${tag}] ${s.name}${s.sim?' sim='+Math.round(s.sim*100)+'%':''}${s.optimized?' (optimized)':''}`,'i');
+  });
+
+  // create runners
+  const runners=scripts.map((s,i)=>({
+    idx:i,script:s,st:'READY',sc:0,path:['READY'],rws:[],done:false,wc:0,
+    wb:.15+R()*.1, tb:.06+R()*.04, fb:.12+R()*.08, mw:4,
+    spd:2+Math.floor(R()*3), ta:0,
+    color:RCOLORS[i%RCOLORS.length],
+    // animated position on state machine
+    ax:SM[0].x, ay:SM[0].y, tx:SM[0].x, ty:SM[0].y,
+  }));
+
+  const inc={id,nid:node.id,node,tpl,title:tpl.title(node),sev:tpl.sev,runners,result:null,winner:null,t0:Date.now()};
+  incidents.push(inc);
+  updateExplain(inc);
+  renderBottom();
+}
+
+function advanceAll(){
+  incidents.forEach(inc=>{
+    if(inc.result)return;
+    let allDone=true;
+    inc.runners.forEach(r=>{
+      if(r.done)return;
+      allDone=false;
+      r.ta++;
+      if(r.ta>=r.spd){r.ta=0;stepR(r,inc)}
+    });
+    if(allDone&&!inc.result)finalize(inc);
+    renderBottom();
+  });
+}
+
+function stepR(r,inc){
+  const edges=EDGES.filter(e=>e.f===r.st);
+  if(!edges.length){r.done=true;return}
+  let ch;
+  if(r.st==='READY')ch=edges.find(e=>e.t==='RUNNING');
+  else if(r.st==='RUNNING')ch=R()<r.wb?edges.find(e=>e.t==='WAITING'):edges.find(e=>e.t==='COMPLETED');
+  else if(r.st==='WAITING'){
+    r.wc++;const rn=R();
+    if(rn<r.tb||r.wc>r.mw)ch=edges.find(e=>e.t==='TERMINATED');
+    else if(rn<r.tb+.35)ch=edges.find(e=>e.t==='RUNNING');
+    else ch=edges.find(e=>e.t==='COMPLETED');
+  }else if(r.st==='COMPLETED')ch=R()<r.fb?edges.find(e=>e.t==='FAILED'):edges.find(e=>e.t==='SUCCEEDED');
+  else if(r.st==='TERMINATED')ch=edges.find(e=>e.t==='FAILED');
+  if(!ch){r.done=true;return}
+
+  r.sc+=ch.rw; r.st=ch.t; r.path.push(ch.t); r.rws.push(ch.rw);
+
+  // animate: set target position
+  const tn=SM.find(s=>s.id===ch.t);
+  if(tn){r.tx=tn.x;r.ty=tn.y}
+
+  // flash edge
+  edgeFlashes.push({f:ch.f,t:ch.t,alpha:1,color:r.color});
+
+  // spawn particles along edge
+  const fn=SM.find(s=>s.id===ch.f),ton=SM.find(s=>s.id===ch.t);
+  if(fn&&ton){
+    for(let i=0;i<4;i++){
+      const p=.2+R()*.6;
+      particles.push({
+        x:fn.x+(ton.x-fn.x)*p+(.5-R())*.03,
+        y:fn.y+(ton.y-fn.y)*p+(.5-R())*.03,
+        vx:(R()-.5)*.003,vy:(R()-.5)*.003,
+        sz:2+R()*2,alpha:.9,color:r.color
+      });
+    }
+  }
+
+  if(['SUCCEEDED','FAILED'].includes(r.st)){
+    r.done=true;
+    const ok=r.st==='SUCCEEDED';
+    log(`${inc.id} ${r.script.name} → ${r.st} [${r.sc}]`,ok?'s':'r');
+  }
+}
+
+function finalize(inc){
+  const w=inc.runners.filter(r=>r.st==='SUCCEEDED').sort((a,b)=>b.sc-a.sc);
+  if(w.length){
+    inc.winner=w[0];inc.result='ok';gs.r++;
+    inc.tpl.fix(inc.node);
+    log(`✓ ${inc.id} RESOLVED: ${inc.winner.script.name} (${inc.winner.sc})`,'s');
+    toast(`✓ ${inc.id} → ${inc.winner.script.name}`,'s');
+  }else{
+    inc.result='fail';gs.f++;
+    log(`✗ ${inc.id} FAILED: all candidates failed`,'r');
+    toast(`✗ ${inc.id} unresolved`,'e');
+  }
+  setTimeout(()=>{
+    incidents=incidents.filter(i=>i.id!==inc.id);
+    resolved.unshift(inc);if(resolved.length>15)resolved.pop();
+    renderBottom();addBbi(inc);
+    if(!incidents.length)updateExplain(null);
+  },2500);
+}
+
+// ═══════════════════════════════════════
+// CANVAS DRAW LOOP
+// ═══════════════════════════════════════
+function resizeCanvas(){
+  canvas=document.getElementById('smCanvas');
+  const r=canvas.parentElement.getBoundingClientRect();
+  const dpr=devicePixelRatio||1;
+  canvas.width=r.width*dpr;canvas.height=r.height*dpr;
+  canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';
+  ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  cw=r.width;ch=r.height;
+}
+
+function drawLoop(){
+  if(!ctx){requestAnimationFrame(drawLoop);return}
+  ctx.clearRect(0,0,cw,ch);
+
+  // collect active states from all runners
+  const activeStates=new Set();
+  const runnersByState={};
+  incidents.forEach(inc=>inc.runners.forEach(r=>{
+    activeStates.add(r.st);
+    if(!runnersByState[r.st])runnersByState[r.st]=[];
+    runnersByState[r.st].push(r);
+    // lerp position
+    r.ax+=(r.tx-r.ax)*.12;
+    r.ay+=(r.ty-r.ay)*.12;
+  }));
+
+  // decay edge flashes
+  edgeFlashes=edgeFlashes.filter(ef=>{ef.alpha-=.03;return ef.alpha>0});
+
+  // draw edges
+  EDGES.forEach(e=>{
+    const fn=SM.find(s=>s.id===e.f),tn=SM.find(s=>s.id===e.t);
+    const x1=fn.x*cw,y1=fn.y*ch,x2=tn.x*cw,y2=tn.y*ch;
+    const mx=(x1+x2)/2,my=(y1+y2)/2,dx=x2-x1,dy=y2-y1;
+    const off=(e.f==='WAITING'&&e.t==='RUNNING')?-.22:.16;
+    const cpx=mx-dy*off,cpy=my+dx*off;
+
+    // check if flashing
+    const flash=edgeFlashes.find(ef=>ef.f===e.f&&ef.t===e.t);
+    const isActive=activeStates.has(e.f)&&activeStates.has(e.t);
+
+    ctx.beginPath();
+    ctx.strokeStyle=flash?flash.color+''+Math.round(flash.alpha*255).toString(16).padStart(2,'0'):isActive?'rgba(30,38,54,.9)':'rgba(26,34,51,.5)';
+    ctx.lineWidth=flash?(1.5+flash.alpha*2):1;
+    ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cpx,cpy,x2,y2);ctx.stroke();
+
+    // arrowhead
+    const at=.82;
+    const ax2=(1-at)**2*x1+2*(1-at)*at*cpx+at**2*x2;
+    const ay2=(1-at)**2*y1+2*(1-at)*at*cpy+at**2*y2;
+    const at2=.80;
+    const bx2=(1-at2)**2*x1+2*(1-at2)*at2*cpx+at2**2*x2;
+    const by2=(1-at2)**2*y1+2*(1-at2)*at2*cpy+at2**2*y2;
+    const ang=Math.atan2(ay2-by2,ax2-bx2);
+    ctx.beginPath();ctx.moveTo(ax2,ay2);
+    ctx.lineTo(ax2-6*Math.cos(ang-Math.PI/6),ay2-6*Math.sin(ang-Math.PI/6));
+    ctx.lineTo(ax2-6*Math.cos(ang+Math.PI/6),ay2-6*Math.sin(ang+Math.PI/6));
+    ctx.closePath();ctx.fillStyle=ctx.strokeStyle;ctx.fill();
+
+    // reward label
+    ctx.font='600 9px IBM Plex Mono';
+    const rwCol=e.rw<=-9?'rgba(255,71,87,.8)':e.rw<=-2?'rgba(255,176,32,.7)':'rgba(134,148,171,.4)';
+    ctx.fillStyle=flash?flash.color:rwCol;
+    const lx=mx+(.5-off)*(cpy-my)*.4-8, ly=my-(.5-off)*(cpx-mx)*.4+3;
+    ctx.fillText(e.rw+'',cpx*.35+mx*.65-6,cpy*.35+my*.65+3);
+  });
+
+  // draw particles
+  particles=particles.filter(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.alpha-=.02;p.sz*=.97;
+    if(p.alpha<=0)return false;
+    ctx.beginPath();ctx.arc(p.x*cw,p.y*ch,p.sz,0,Math.PI*2);
+    ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();ctx.globalAlpha=1;
+    return true;
+  });
+
+  // draw nodes
+  SM.forEach(n=>{
+    const px=n.x*cw,py=n.y*ch;
+    const isAct=activeStates.has(n.id);
+    const count=(runnersByState[n.id]||[]).length;
+
+    // glow
+    if(isAct&&count>0){
+      ctx.beginPath();ctx.arc(px,py,n.r+10,0,Math.PI*2);
+      ctx.fillStyle=n.c+'15';ctx.fill();
+    }
+
+    ctx.beginPath();ctx.arc(px,py,n.r,0,Math.PI*2);
+    ctx.fillStyle=isAct?n.c+'18':'rgba(10,14,21,.95)';
+    ctx.fill();
+    ctx.strokeStyle=isAct?n.c:'#1a2233';
+    ctx.lineWidth=isAct?2:1.2;
+    ctx.stroke();
+
+    // label
+    ctx.font=`${isAct?'700':'500'} ${n.r>26?'9':'8'}px IBM Plex Mono`;
+    ctx.fillStyle=isAct?n.c:'#4d5a72';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.label,px,py);
+
+    // count badge
+    if(count>0){
+      ctx.font='700 8px IBM Plex Mono';
+      ctx.fillStyle=n.c;
+      ctx.fillText(count+'',px,py+n.r+10);
+    }
+  });
+
+  // draw runner dots on their animated positions
+  incidents.forEach(inc=>inc.runners.forEach(r=>{
+    if(r.done&&(r.st==='SUCCEEDED'||r.st==='FAILED'))return; // hide finished
+    const px=r.ax*cw,py=r.ay*ch;
+    // offset multiple runners at same state
+    const peers=(runnersByState[r.st]||[]);
+    const pi=peers.indexOf(r);
+    const offx=(pi-(peers.length-1)/2)*8;
+
+    ctx.beginPath();ctx.arc(px+offx,py-SM.find(s=>s.id===r.st).r-12,4,0,Math.PI*2);
+    ctx.fillStyle=r.color;ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=1;ctx.stroke();
+  }));
+
+  requestAnimationFrame(drawLoop);
+}
+
+// ═══════════════════════════════════════
+// EXPLANATION OVERLAY
+// ═══════════════════════════════════════
+function updateExplain(inc){
+  const el=document.getElementById('smExplain');
+  if(!inc){
+    el.innerHTML='State machine idle. Each script candidate becomes a <span class="hl">runner</span> that traverses states. Transitions carry <span class="hl">reward penalties</span>. Best (least negative) score wins.';
+    return;
+  }
+  el.innerHTML=`<span class="hl">${inc.id}</span> — ${inc.runners.length} runners evaluating concurrently.<br>
+  Each dot is a script. They traverse <span class="hl">READY→RUNNING→COMPLETED→SUCCEEDED</span> ideally (score -3).<br>
+  Detours through <span class="hl">WAITING</span> (-2) or <span class="hl">TERMINATED</span> (-3) cost more. <span class="hl">FAILED</span> = -9 penalty.`;
+}
+
+// ═══════════════════════════════════════
+// BOTTOM PANEL (runners detail)
+// ═══════════════════════════════════════
+function renderBottom(){
+  const el=document.getElementById('runnersArea');
+  document.getElementById('rnCt').textContent=(incidents.reduce((a,i)=>a+i.runners.length,0))+' runners';
+
+  if(!incidents.length&&!resolved.length){
+    el.innerHTML='<div style="padding:.6rem;text-align:center;color:var(--t3)">No active incident</div>';
+    return;
+  }
+  let html='';
+  incidents.forEach(inc=>{
+    html+=`<div class="inc-bar">
+      <span class="inc-sev ${inc.sev}">${inc.sev}</span>
+      <span class="inc-title">${inc.id} · ${inc.title}</span>
+      <span class="inc-phase">${inc.result==='ok'?'RESOLVED':inc.result==='fail'?'FAILED':'SIMULATING'}</span>
+      <span class="inc-time">${timeSince(inc.t0)}</span>
+    </div>`;
+    html+='<div class="rn-grid">';
+    inc.runners.forEach((r,i)=>{
+      const col=r.st==='SUCCEEDED'?'var(--g)':r.st==='FAILED'?'var(--r)':r.done?'var(--t3)':r.color;
+      const wcls=inc.winner&&inc.winner.idx===i?' winner':(inc.result&&r.st!=='SUCCEEDED'?' loser':'');
+      const pct=Math.max(5,Math.min(100,((r.sc+25)/23)*100));
+
+      // path with highlights
+      let pathHtml='<div class="rn-path">';
+      r.path.forEach((s,pi)=>{
+        const cls=s==='SUCCEEDED'?'pass':s==='FAILED'?'fail':(pi===r.path.length-1&&!r.done?'cur':'');
+        pathHtml+=`<span class="rn-ps ${cls}">${s.slice(0,3)}</span>`;
+        if(pi<r.path.length-1)pathHtml+='<span class="rn-arr">→</span>';
+      });
+      pathHtml+='</div>';
+
+      // rewards breakdown
+      let rwHtml='<div class="rn-rewards">';
+      r.rws.forEach(rw=>{
+        const c=rw<=-9?'var(--r)':rw<=-2?'var(--a)':'var(--t2)';
+        rwHtml+=`<span class="rn-rw" style="color:${c}">${rw}</span>`;
+      });
+      rwHtml+='</div>';
+
+      html+=`<div class="rn${wcls}">
+        <div class="rn-top">
+          <div class="rn-dot" style="background:${r.color}"></div>
+          <div class="rn-name">${r.script.name}</div>
+          <div class="rn-state" style="color:${col}">${r.st}</div>
+          <div class="rn-score" style="color:${col}">${r.sc}</div>
+        </div>
+        ${pathHtml}${rwHtml}
+        <div class="rn-bar"><div class="rn-bf" style="width:${pct}%;background:${col}"></div></div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  // show last few resolved
+  resolved.slice(0,3).forEach(inc=>{
+    const ok=inc.result==='ok';
+    html+=`<div class="inc-bar" style="opacity:.5">
+      <span class="inc-sev" style="background:${ok?'rgba(0,230,138,.1)':'rgba(255,71,87,.1)'};color:${ok?'var(--g)':'var(--r)'}">${ok?'OK':'FAIL'}</span>
+      <span class="inc-title">${inc.id} · ${inc.title}</span>
+      <span class="inc-phase" style="color:${ok?'var(--g)':'var(--r)'}">${ok?inc.winner.script.name+' ('+inc.winner.sc+')':'ALL FAILED'}</span>
+      <span class="inc-time">${timeSince(inc.t0)}</span>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ═══════════════════════════════════════
+// INFRA RENDER
+// ═══════════════════════════════════════
+function renderInfra(){
+  const el=document.getElementById('infraList');
+  el.innerHTML=NODES.map(n=>{
+    const mc=(v,hi=90)=>v>hi?'var(--r)':v>75?'var(--a)':'var(--g)';
+    const cc=n.type==='postgres'?(n.conn<10?'var(--r)':'var(--g)'):(n.type==='redis'?(n.conn>1600?'var(--a)':'var(--g)'):'var(--g)');
+    return`<div class="nd"><div class="nd-top"><div class="nd-dot ${n.status}"></div><div class="nd-name">${n.name}</div><div class="nd-type">${n.type}</div></div>
+    <div class="nd-bars">
+      <div class="mb"><div class="mb-l">CPU</div><div class="mb-v" style="color:${mc(n.cpu,92)}">${Math.round(n.cpu)}%</div><div class="mb-bar"><div class="mb-f" style="width:${n.cpu}%;background:${mc(n.cpu,92)}"></div></div></div>
+      <div class="mb"><div class="mb-l">MEM</div><div class="mb-v" style="color:${mc(n.mem,93)}">${Math.round(n.mem)}%</div><div class="mb-bar"><div class="mb-f" style="width:${n.mem}%;background:${mc(n.mem,93)}"></div></div></div>
+      <div class="mb"><div class="mb-l">DSK</div><div class="mb-v" style="color:${mc(n.disk)}">${Math.round(n.disk)}%</div><div class="mb-bar"><div class="mb-f" style="width:${n.disk}%;background:${mc(n.disk)}"></div></div></div>
+      <div class="mb"><div class="mb-l">CONN</div><div class="mb-v" style="color:${cc}">${n.conn}</div><div class="mb-bar"><div class="mb-f" style="width:${Math.min(100,n.conn/20)}%;background:${cc}"></div></div></div>
+    </div></div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// VECTORS
+// ═══════════════════════════════════════
+function renderVecs(){
+  document.getElementById('vecList').innerHTML=VECS.map(v=>
+    `<button class="vec" id="vb-${v.id}" onclick="fireV('${v.id}')"><div class="vi">${v.ic}</div><div style="flex:1;min-width:0"><div class="vn">${v.nm}</div><div class="vd">${v.ds}</div></div><div class="vf">FIRE</div></button>`
+  ).join('');
+}
+function fireV(id){
+  if(cooldowns[id])return;
+  const v=VECS.find(x=>x.id===id);if(!v)return;
+  v.fn();log(`VECTOR ▸ ${v.nm}: ${v.ds}`,'w');toast(`⚡ ${v.nm}`,'w');
+  cooldowns[id]=true;document.getElementById(`vb-${id}`).classList.add('cd');
+  setTimeout(()=>{cooldowns[id]=false;document.getElementById(`vb-${id}`).classList.remove('cd')},2500);
+}
+function eachR(fn){incidents.forEach(inc=>inc.runners.forEach(r=>{if(!r.done)fn(r)}))}
+
+// ═══════════════════════════════════════
+// LOG & TOAST
+// ═══════════════════════════════════════
+function log(msg,type='i'){
+  const el=document.getElementById('logArea');
+  const t=new Date(),ts=`${p2(t.getHours())}:${p2(t.getMinutes())}:${p2(t.getSeconds())}`;
+  const cls={i:'li',w:'lw',r:'lr',s:'ls',p:'lp',c:'lc'}[type]||'li';
+  const d=document.createElement('div');d.className='le';
+  d.innerHTML=`<span class="lt">${ts}</span><span class="${cls}">${msg}</span>`;
+  el.appendChild(d);if(el.children.length>300)el.removeChild(el.firstChild);
+  el.scrollTop=el.scrollHeight;
+}
+function toast(msg,type=''){
+  const d=document.createElement('div');d.className='toast'+(type?' t'+type:'');d.textContent=msg;
+  document.getElementById('toastZ').appendChild(d);setTimeout(()=>d.remove(),3000);
+}
+
+// ═══════════════════════════════════════
+// TOP BAR
+// ═══════════════════════════════════════
+function updateTop(){
+  const h=NODES.filter(n=>n.status==='ok').length;
+  document.getElementById('tH').textContent=h;
+  document.getElementById('tH').className='v '+(h===NODES.length?'ok':h>4?'w':'c');
+  document.getElementById('tI').textContent=gs.i;
+  document.getElementById('tR').textContent=gs.r;
+  const fe=document.getElementById('tF');fe.textContent=gs.f;fe.className='v '+(gs.f>0?'c':'');
+  const tot=gs.r+gs.f;const re=document.getElementById('tRt');
+  if(tot>0){const rate=Math.round(gs.r/tot*100);re.textContent=rate+'%';re.className='v '+(rate>80?'ok':rate>50?'w':'c')}
+  const s=Math.floor((Date.now()-t0)/1000);
+  document.getElementById('upt').textContent=`${p2(Math.floor(s/3600))}:${p2(Math.floor(s%3600/60))}:${p2(s%60)}`;
+}
+
+function addBbi(inc){
+  const ok=inc.result==='ok';
+  const d=document.createElement('div');d.className='bi';
+  d.innerHTML=`<div class="bd" style="background:${ok?'var(--g)':'var(--r)'}"></div>${inc.id} ${ok?inc.winner.script.name:'FAILED'}`;
+  document.getElementById('bbar').appendChild(d);
+}
+
+// ═══════════════════════════════════════
+// UTIL
+// ═══════════════════════════════════════
+function R(){return Math.random()}
+function cl(v,lo,hi){return Math.max(lo,Math.min(hi,v))}
+function p2(n){return String(n).padStart(2,'0')}
+function pick(a,n){const b=[...a],r=[];for(let i=0;i<n&&b.length;i++){const j=Math.floor(R()*b.length);r.push(b.splice(j,1)[0])}return r}
+function timeSince(t){const s=Math.floor((Date.now()-t)/1000);return s<60?s+'s':Math.floor(s/60)+'m'}
+
+// ═══════════════════════════════════════
+init();
+</script>
+</body>
+</html>

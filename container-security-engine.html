@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US 12,112,155 B2 — ML Scoring Engine for Container Hosting Security</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0e17;--surface:#111827;--surface2:#1a2332;--border:#1e293b;
+--text:#e2e8f0;--text-dim:#64748b;--accent:#22d3ee;--accent2:#818cf8;
+--green:#34d399;--red:#f87171;--orange:#fbbf24;--pink:#f472b6;
+--radius:8px;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;min-height:100vh}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* TOP BAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.topbar h1{font-size:14px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
+.topbar h1 .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite}
+.topbar .patent{font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* LAYOUT */
+.main{display:grid;grid-template-columns:320px 1fr 300px;grid-template-rows:auto 1fr;height:calc(100vh - 49px)}
+.panel{border-right:1px solid var(--border);overflow-y:auto}
+.panel:last-child{border-right:none;border-left:1px solid var(--border)}
+.panel-header{padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);display:flex;align-items:center;justify-content:space-between}
+.panel-header .count{background:var(--accent);color:var(--bg);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+
+/* MAP CENTER */
+.map-area{position:relative;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+.map-container{flex:1;position:relative;overflow:hidden}
+.world-map{width:100%;height:100%;position:relative}
+.world-map svg{width:100%;height:100%}
+
+/* CLOUD NODES ON MAP */
+.cloud-node{position:absolute;z-index:10;cursor:pointer;transition:transform .2s}
+.cloud-node:hover{transform:scale(1.15)}
+.cloud-node .node-ring{width:48px;height:48px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;position:relative}
+.cloud-node .node-ring::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px solid;opacity:.3;animation:ring-pulse 3s infinite}
+.cloud-node .node-label{position:absolute;top:52px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;text-align:center}
+.cloud-node .node-score{position:absolute;top:68px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+@keyframes ring-pulse{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.3);opacity:0}}
+
+/* PROVIDER COLORS */
+.provider-a .node-ring{border-color:#22d3ee;color:#22d3ee;background:rgba(34,211,238,.1)}
+.provider-a .node-ring::after{border-color:#22d3ee}
+.provider-a .node-label,.provider-a .node-score{color:#22d3ee}
+.provider-b .node-ring{border-color:#818cf8;color:#818cf8;background:rgba(129,140,248,.1)}
+.provider-b .node-ring::after{border-color:#818cf8}
+.provider-b .node-label,.provider-b .node-score{color:#818cf8}
+.provider-c .node-ring{border-color:#f472b6;color:#f472b6;background:rgba(244,114,182,.1)}
+.provider-c .node-ring::after{border-color:#f472b6}
+.provider-c .node-label,.provider-c .node-score{color:#f472b6}
+.provider-d .node-ring{border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,.1)}
+.provider-d .node-ring::after{border-color:#fbbf24}
+.provider-d .node-label,.provider-d .node-score{color:#fbbf24}
+
+/* DATA FLOW LINES */
+.flow-line{position:absolute;pointer-events:none;z-index:5}
+.flow-line line{stroke-dasharray:6 4;animation:dash-flow 1.5s linear infinite}
+@keyframes dash-flow{to{stroke-dashoffset:-20}}
+
+/* CONTAINER CARDS */
+.container-card{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.container-card:hover{background:var(--surface2)}
+.container-card.active{background:var(--surface2);border-left:3px solid var(--accent)}
+.container-card .cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.container-card .cc-name{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.container-card .cc-status{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.cc-status.parsing{background:rgba(251,191,36,.15);color:#fbbf24}
+.cc-status.scoring{background:rgba(129,140,248,.15);color:#818cf8}
+.cc-status.deploying{background:rgba(34,211,238,.15);color:#22d3ee}
+.cc-status.hosted{background:rgba(52,211,153,.15);color:#34d399}
+.cc-status.migrating{background:rgba(244,114,182,.15);color:#f472b6}
+.container-card .cc-images{font-size:10px;color:var(--text-dim);margin-bottom:4px}
+.container-card .cc-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.container-card .cc-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+
+/* DOCKERFILE PREVIEW */
+.dockerfile-preview{padding:12px 16px;font-size:10px;font-family:'JetBrains Mono',monospace;line-height:1.8;color:var(--text-dim);border-bottom:1px solid var(--border);background:rgba(0,0,0,.3)}
+.dockerfile-preview .kw{color:var(--accent)}
+.dockerfile-preview .str{color:var(--green)}
+.dockerfile-preview .comment{color:#475569;font-style:italic}
+
+/* RIGHT PANEL - LOGS & SCORES */
+.log-entry{padding:8px 12px;border-bottom:1px solid rgba(30,41,59,.5);font-size:10px;font-family:'JetBrains Mono',monospace;line-height:1.5;animation:log-in .3s ease}
+@keyframes log-in{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+.log-entry .log-time{color:var(--text-dim);margin-right:6px}
+.log-entry .log-ok{color:var(--green)}
+.log-entry .log-warn{color:var(--orange)}
+.log-entry .log-fail{color:var(--red)}
+.log-entry .log-info{color:var(--accent)}
+.log-entry .log-ml{color:var(--accent2)}
+
+/* RISK MATRIX */
+.risk-matrix{padding:12px 16px;border-bottom:1px solid var(--border)}
+.risk-matrix h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:10px}
+.risk-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.risk-row .risk-label{font-size:10px;width:60px;font-family:'JetBrains Mono',monospace;color:var(--text-dim)}
+.risk-bar-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;position:relative}
+.risk-bar-val{height:100%;border-radius:3px;transition:width .6s ease,background .6s ease}
+.risk-row .risk-num{font-size:10px;font-family:'JetBrains Mono',monospace;width:32px;text-align:right;font-weight:600}
+
+/* RL REWARD */
+.rl-section{padding:12px 16px;border-bottom:1px solid var(--border)}
+.rl-section h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:8px}
+.rl-epoch{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:10px;font-family:'JetBrains Mono',monospace}
+.rl-epoch .epoch-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.rl-epoch .epoch-fill{height:100%;border-radius:2px;transition:width .5s}
+
+/* VECTOR CONTROLS */
+.vector-controls{padding:12px 16px;border-bottom:1px solid var(--border)}
+.vector-controls h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.vector-btn{display:block;width:100%;padding:8px 12px;margin-bottom:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;text-align:left}
+.vector-btn:hover{border-color:var(--accent);background:rgba(34,211,238,.05)}
+.vector-btn:active{transform:scale(.98)}
+.vector-btn .vb-label{font-weight:600;margin-bottom:2px}
+.vector-btn .vb-desc{font-size:9px;color:var(--text-dim)}
+
+/* BOTTOM STATUS BAR */
+.statusbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-top:1px solid var(--border);background:var(--surface);font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-dim)}
+.statusbar .status-left{display:flex;align-items:center;gap:16px}
+.statusbar .status-indicator{display:flex;align-items:center;gap:4px}
+.statusbar .status-indicator .si-dot{width:6px;height:6px;border-radius:50%}
+
+/* DECISION BANNER */
+.decision-banner{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--green);border-radius:var(--radius);padding:14px 24px;z-index:20;display:none;animation:banner-in .5s ease;box-shadow:0 8px 32px rgba(0,0,0,.5);text-align:center;min-width:400px}
+@keyframes banner-in{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.decision-banner h3{font-size:13px;font-weight:700;color:var(--green);margin-bottom:4px}
+.decision-banner p{font-size:11px;color:var(--text-dim)}
+
+/* PARTICLE CANVAS */
+#particles{position:absolute;inset:0;pointer-events:none;z-index:1}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.main{grid-template-columns:260px 1fr 260px}}
+@media(max-width:900px){.main{grid-template-columns:1fr;grid-template-rows:auto}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1><span class="dot"></span> MONOTONICITY ENGINE <span style="color:var(--text-dim);font-weight:400">v2.1</span></h1>
+  <span class="patent">US 12,112,155 B2 Safest container hosting NLP-ML-RL</span>
+</div>
+
+<div class="main">
+  <!-- LEFT PANEL: CONTAINERS -->
+  <div class="panel" id="leftPanel">
+    <div class="panel-header">Application Containers <span class="count" id="containerCount">0</span></div>
+    <div id="containerList"></div>
+  </div>
+
+  <!-- CENTER: MAP -->
+  <div class="map-area">
+    <div class="map-container" id="mapContainer">
+      <canvas id="particles"></canvas>
+      <svg id="flowLines" style="position:absolute;inset:0;z-index:5;pointer-events:none"></svg>
+      <!-- Cloud provider nodes injected by JS -->
+      <div id="cloudNodes"></div>
+      <div class="decision-banner" id="decisionBanner">
+        <h3 id="decisionTitle"></h3>
+        <p id="decisionText"></p>
+      </div>
+    </div>
+    <!-- VECTOR CONTROLS -->
+    <div class="vector-controls" id="vectorPanel">
+      <h3>⚡ Perturbation vectors</h3>
+      <button class="vector-btn" onclick="injectVector('cve')">
+        <div class="vb-label">CVE-2026 zero-day on Provider A</div>
+        <div class="vb-desc">Injects critical vulnerability, forces re-evaluation and potential migration</div>
+      </button>
+      <button class="vector-btn" onclick="injectVector('policy')">
+        <div class="vb-label">Security policy update (encryption mandate)</div>
+        <div class="vb-desc">New monotonicity condition requiring file system encryption on all nodes</div>
+      </button>
+      <button class="vector-btn" onclick="injectVector('drift')">
+        <div class="vb-label">Configuration drift detected</div>
+        <div class="vb-desc">Base image hash mismatch across environments, triggers re-scan</div>
+      </button>
+      <button class="vector-btn" onclick="injectVector('outage')">
+        <div class="vb-label">Provider outage (region failover)</div>
+        <div class="vb-desc">Simulates regional failure, orchestrator re-hosts to next safest provider</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: LOGS & SCORES -->
+  <div class="panel" id="rightPanel">
+    <div class="panel-header">Engine telemetry <span class="count" id="logCount">0</span></div>
+    <div class="rl-section" id="rlSection">
+      <h3>Reinforcement learning — policy network</h3>
+      <div id="rlEpochs"></div>
+    </div>
+    <div class="risk-matrix" id="riskMatrix">
+      <h3>Aggregate risk scores</h3>
+      <div id="riskRows"></div>
+    </div>
+    <div class="panel-header" style="border-top:1px solid var(--border)">Live log</div>
+    <div id="logContainer" style="max-height:300px;overflow-y:auto"></div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <div class="status-left">
+      <div class="status-indicator"><div class="si-dot" style="background:var(--green)"></div> Orchestrator online</div>
+      <div class="status-indicator"><div class="si-dot" style="background:var(--accent)"></div> <span id="statusContainers">0</span> containers</div>
+      <div class="status-indicator"><div class="si-dot" style="background:var(--accent2)"></div> <span id="statusEpoch">0</span> RL epochs</div>
+    </div>
+    <div>
+      <span style="margin-right:12px;color:#475569">Inventors: Igor Monteiro Vieira, Marcelo Mota Manhaes, Thiago Bianchi, Suellen Caroline Da Silva</span>
+      <span id="statusClock"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== DATA MODEL ==========
+const PROVIDERS = [
+  {id:'A',name:'CLDA',label:'US-EAST',city:'Virginia',lat:37.5,lng:-77.5,color:'#22d3ee',class:'provider-a',x:'22%',y:'38%'},
+  {id:'B',name:'CLDB',label:'EU-WEST',city:'Frankfurt',lat:50.1,lng:8.7,color:'#818cf8',class:'provider-b',x:'50%',y:'28%'},
+  {id:'C',name:'CLDC',label:'AP-SOUTH',city:'Singapore',lat:1.3,lng:103.8,color:'#f472b6',class:'provider-c',x:'76%',y:'55%'},
+  {id:'D',name:'CLDD',label:'SA-EAST',city:'São Paulo',lat:-23.5,lng:-46.6,color:'#fbbf24',class:'provider-d',x:'32%',y:'62%'}
+];
+
+const BASE_IMAGES = ['OSTRAN','UIWEB','DBSTORE','FINTRAN','AUTHSVC','CACHEPRX','MSGQUEUE'];
+const PLATFORMS = ['Container as a Service','Ubuntu 22.04','Alpine 3.18','Debian 12'];
+const RISK_AREAS = ['Security Configurations','Identification & Access Mgmt','Vulnerability Management','Network Controls','Data Protection'];
+
+const MONOTONICITY_CHECKS = [
+  'User for container has been created','Containers use only trusted base images',
+  'Unnecessary packages removed','Content trust is enabled',
+  'HEALTHCHECK instructions present','setuid/setgid permissions removed',
+  'COPY used instead of ADD','Secrets not embedded in image',
+  'Only verified packages installed','Security options are set',
+  'Linux kernel capabilities restricted','Privileged containers not used',
+  'Sensitive host dirs not mounted','sshd not running in containers',
+  'Privileged ports not mapped','Only needed ports are open',
+  'Host network namespace not shared','Memory usage limited',
+  'CPU priority set appropriately','Root filesystem is read-only',
+  'Host process namespace not shared','Host IPC namespace not shared',
+  'Host devices not exposed to containers','Default ulimit overwritten at runtime',
+  'Mount propagation mode not shared','Default seccomp profile active',
+  'exec commands restricted','cgroup usage confirmed',
+  'PIDs cgroup limit applied','Default bridge "docker0" not used',
+  'Host user namespaces not shared','Container sockets not mounted'
+];
+
+let state = {
+  containers: [],
+  providers: PROVIDERS.map(p => ({...p, score: 5 + Math.random()*3, scripts:[], events:[]})),
+  logs: [],
+  rlEpochs: 0,
+  totalContainers: 0,
+  running: true,
+  activeContainer: null
+};
+
+// ========== INIT ==========
+function init() {
+  renderCloudNodes();
+  renderRiskMatrix();
+  startParticles();
+  startClock();
+  // Spawn initial containers
+  setTimeout(() => spawnContainer('PCI-APP-001','Payment Gateway',['OSTRAN','UIWEB','DBSTORE','FINTRAN']), 500);
+  setTimeout(() => spawnContainer('AUTH-SVC-002','Auth Service',['AUTHSVC','CACHEPRX']), 2000);
+  setTimeout(() => spawnContainer('MSG-BRK-003','Message Broker',['MSGQUEUE','CACHEPRX','OSTRAN']), 4000);
+  setTimeout(() => spawnContainer('DATA-PLN-004','Data Pipeline',['DBSTORE','OSTRAN','UIWEB']), 7000);
+  setTimeout(() => spawnContainer('API-GW-005','API Gateway',['UIWEB','AUTHSVC','CACHEPRX']), 10000);
+  // Continuous RL training loop
+  setInterval(rlTrainingStep, 3000);
+  // Continuous monitoring
+  setInterval(monitoringCycle, 5000);
+}
+
+// ========== CLOUD NODE RENDERING ==========
+function renderCloudNodes() {
+  const container = document.getElementById('cloudNodes');
+  container.innerHTML = '';
+  state.providers.forEach(p => {
+    const div = document.createElement('div');
+    div.className = `cloud-node ${p.class}`;
+    div.id = `node-${p.id}`;
+    div.style.cssText = `left:${p.x};top:${p.y};transform:translate(-50%,-50%)`;
+    div.innerHTML = `
+      <div class="node-ring">${p.name}</div>
+      <div class="node-label">${p.label} · ${p.city}</div>
+      <div class="node-score" id="score-${p.id}">${p.score.toFixed(2)}</div>
+    `;
+    div.onclick = () => showProviderDetail(p);
+    container.appendChild(div);
+  });
+}
+
+// ========== CONTAINER LIFECYCLE ==========
+function spawnContainer(id, name, images) {
+  const container = {
+    id, name, images,
+    status: 'parsing',
+    progress: 0,
+    scores: {},
+    hostedOn: null,
+    monotonicity: {},
+    dockerfile: generateDockerfile(images)
+  };
+  state.containers.push(container);
+  state.totalContainers++;
+  document.getElementById('containerCount').textContent = state.containers.length;
+  document.getElementById('statusContainers').textContent = state.containers.length;
+  
+  addLog('info', `Container ${id} registered — ${images.length} base images detected`);
+  renderContainerList();
+  
+  // Start async pipeline
+  processContainer(container);
+}
+
+async function processContainer(c) {
+  // PHASE 1: Parse dockerfile
+  c.status = 'parsing';
+  renderContainerList();
+  addLog('info', `[${c.id}] Parsing application container configuration...`);
+  
+  for(let img of c.images) {
+    await delay(400 + Math.random()*600);
+    addLog('ok', `[${c.id}] Base image identified: ${img}`);
+    c.progress = Math.min(25, c.progress + 25/c.images.length);
+    renderContainerList();
+  }
+  
+  // PHASE 2: Script data extraction & scoring
+  c.status = 'scoring';
+  renderContainerList();
+  addLog('info', `[${c.id}] Sending script data requests to ${state.providers.length} environments...`);
+  
+  // Score against each provider concurrently
+  const scorePromises = state.providers.map(p => scoreAgainstProvider(c, p));
+  await Promise.all(scorePromises);
+  
+  c.progress = 75;
+  renderContainerList();
+  
+  // PHASE 3: Evaluate & select
+  c.status = 'deploying';
+  renderContainerList();
+  
+  const best = selectBestProvider(c);
+  addLog('ml', `[${c.id}] RL policy network recommends: ${best.name} (${best.label}) — score ${c.scores[best.id].toFixed(2)}`);
+  
+  await delay(800);
+  c.hostedOn = best.id;
+  c.status = 'hosted';
+  c.progress = 100;
+  renderContainerList();
+  drawFlowLine(c, best);
+  
+  addLog('ok', `[${c.id}] Successfully hosted on ${best.name} (${best.city})`);
+  showDecision(`${c.id} → ${best.name}`, `Deployed to ${best.city} with security score ${c.scores[best.id].toFixed(2)} / 10.00`);
+  
+  updateRiskMatrix();
+}
+
+async function scoreAgainstProvider(container, provider) {
+  const checks = shuffleArray([...MONOTONICITY_CHECKS]).slice(0, 8 + Math.floor(Math.random()*8));
+  let passed = 0;
+  let total = checks.length;
+  
+  for(let check of checks) {
+    await delay(150 + Math.random()*250);
+    const pass = Math.random() > 0.2;
+    if(pass) passed++;
+    
+    const cls = pass ? 'ok' : 'fail';
+    const sym = pass ? 'PASS' : 'FAIL';
+    addLog(cls, `[${container.id}] ${provider.name} — ${check}: ${sym}`);
+  }
+  
+  // Compute security score
+  const baseScore = (passed / total) * 10;
+  const exploitability = 1 + Math.random() * 4;
+  const pervasiveness = 1 + Math.random() * 4;
+  const impact = 1 + Math.random() * 4;
+  const aggScore = (baseScore * 0.4 + (10 - exploitability) * 0.2 + (10 - pervasiveness) * 0.2 + (10 - impact) * 0.2);
+  
+  container.scores[provider.id] = aggScore;
+  container.monotonicity[provider.id] = {passed, total, exploitability, pervasiveness, impact};
+  
+  // Update provider aggregate
+  provider.score = (provider.score + aggScore) / 2;
+  document.getElementById(`score-${provider.id}`).textContent = provider.score.toFixed(2);
+  
+  container.progress = Math.min(70, container.progress + 15);
+  renderContainerList();
+}
+
+function selectBestProvider(container) {
+  let bestId = null;
+  let bestScore = -1;
+  for(let pid in container.scores) {
+    if(container.scores[pid] > bestScore) {
+      bestScore = container.scores[pid];
+      bestId = pid;
+    }
+  }
+  return state.providers.find(p => p.id === bestId);
+}
+
+// ========== VECTOR INJECTION ==========
+function injectVector(type) {
+  const hosted = state.containers.filter(c => c.status === 'hosted');
+  if(hosted.length === 0) {
+    addLog('warn', 'No hosted containers to perturb — waiting for deployments');
+    return;
+  }
+  
+  const target = hosted[Math.floor(Math.random() * hosted.length)];
+  
+  switch(type) {
+    case 'cve':
+      injectCVE(target);
+      break;
+    case 'policy':
+      injectPolicyChange(target);
+      break;
+    case 'drift':
+      injectDrift(target);
+      break;
+    case 'outage':
+      injectOutage(target);
+      break;
+  }
+}
+
+async function injectCVE(container) {
+  const currentProvider = state.providers.find(p => p.id === container.hostedOn);
+  addLog('fail', `⚠ CVE-2026-41892 CRITICAL: Remote code execution in ${currentProvider.name} runtime`);
+  addLog('warn', `[${container.id}] Security event — re-evaluating hosting decision...`);
+  
+  // Drastically lower current provider score
+  container.scores[currentProvider.id] *= 0.4;
+  currentProvider.score *= 0.6;
+  document.getElementById(`score-${currentProvider.id}`).textContent = currentProvider.score.toFixed(2);
+  
+  // Trigger migration
+  await migrateContainer(container, currentProvider);
+}
+
+async function injectPolicyChange(container) {
+  addLog('warn', `⚠ POLICY UPDATE: Monotonicity condition added — file system encryption required`);
+  
+  const currentProvider = state.providers.find(p => p.id === container.hostedOn);
+  
+  // Re-score all providers with new condition
+  for(let p of state.providers) {
+    const encryptionCompliant = Math.random() > 0.4;
+    if(!encryptionCompliant) {
+      container.scores[p.id] *= 0.7;
+      p.score *= 0.85;
+      addLog('fail', `[${container.id}] ${p.name} fails encryption mandate — score adjusted`);
+    } else {
+      addLog('ok', `[${container.id}] ${p.name} passes encryption mandate`);
+    }
+    document.getElementById(`score-${p.id}`).textContent = p.score.toFixed(2);
+  }
+  
+  const best = selectBestProvider(container);
+  if(best.id !== container.hostedOn) {
+    await migrateContainer(container, currentProvider);
+  } else {
+    addLog('ok', `[${container.id}] Current host ${currentProvider.name} remains optimal after policy update`);
+    updateRiskMatrix();
+  }
+}
+
+async function injectDrift(container) {
+  const currentProvider = state.providers.find(p => p.id === container.hostedOn);
+  addLog('warn', `⚠ DRIFT: Base image hash mismatch on ${currentProvider.name} for ${container.id}`);
+  addLog('info', `[${container.id}] Re-extracting script data from ${currentProvider.name}...`);
+  
+  container.status = 'scoring';
+  renderContainerList();
+  
+  await scoreAgainstProvider(container, currentProvider);
+  
+  const best = selectBestProvider(container);
+  if(best.id !== container.hostedOn && container.scores[best.id] - container.scores[container.hostedOn] > 0.5) {
+    await migrateContainer(container, currentProvider);
+  } else {
+    container.status = 'hosted';
+    renderContainerList();
+    addLog('ok', `[${container.id}] Drift resolved — remaining on ${currentProvider.name}`);
+    showDecision('Drift resolved', `${container.id} stays on ${currentProvider.name} (score delta insufficient for migration)`);
+    updateRiskMatrix();
+  }
+}
+
+async function injectOutage(container) {
+  const currentProvider = state.providers.find(p => p.id === container.hostedOn);
+  addLog('fail', `⚠ OUTAGE: ${currentProvider.name} (${currentProvider.city}) — region unreachable`);
+  
+  // Zero out the provider
+  container.scores[currentProvider.id] = 0;
+  currentProvider.score *= 0.3;
+  document.getElementById(`score-${currentProvider.id}`).textContent = currentProvider.score.toFixed(2);
+  
+  // Flash the node
+  const node = document.getElementById(`node-${currentProvider.id}`);
+  node.style.opacity = '0.3';
+  
+  await migrateContainer(container, currentProvider);
+  
+  setTimeout(() => {
+    node.style.opacity = '1';
+    currentProvider.score += 2;
+    document.getElementById(`score-${currentProvider.id}`).textContent = currentProvider.score.toFixed(2);
+    addLog('ok', `${currentProvider.name} (${currentProvider.city}) — region recovered`);
+  }, 8000);
+}
+
+async function migrateContainer(container, fromProvider) {
+  container.status = 'migrating';
+  renderContainerList();
+  
+  clearFlowLines(container.id);
+  
+  // Re-score remaining providers
+  const candidates = state.providers.filter(p => p.id !== fromProvider.id);
+  for(let p of candidates) {
+    await scoreAgainstProvider(container, p);
+  }
+  
+  const best = selectBestProvider(container);
+  addLog('ml', `[${container.id}] RL migration decision: ${fromProvider.name} → ${best.name}`);
+  
+  await delay(600);
+  container.hostedOn = best.id;
+  container.status = 'hosted';
+  container.progress = 100;
+  renderContainerList();
+  drawFlowLine(container, best);
+  
+  addLog('ok', `[${container.id}] Successfully re-hosted on ${best.name} (${best.city})`);
+  showDecision(`Migration: ${container.id}`, `${fromProvider.city} → ${best.city} | New score: ${container.scores[best.id].toFixed(2)}`);
+  
+  updateRiskMatrix();
+}
+
+// ========== RL TRAINING ==========
+function rlTrainingStep() {
+  state.rlEpochs++;
+  document.getElementById('statusEpoch').textContent = state.rlEpochs;
+  
+  // Simulate reward calculation
+  const rewards = state.providers.map(p => {
+    const reward = -10 + Math.random() * p.score * 2;
+    return {provider: p, reward};
+  });
+  
+  // Update provider scores slightly based on RL
+  rewards.forEach(r => {
+    const adjustment = r.reward * 0.02;
+    r.provider.score = Math.max(1, Math.min(10, r.provider.score + adjustment));
+    document.getElementById(`score-${r.provider.id}`).textContent = r.provider.score.toFixed(2);
+  });
+  
+  renderRLEpochs(rewards);
+  
+  if(state.rlEpochs % 5 === 0) {
+    addLog('ml', `RL epoch ${state.rlEpochs} — policy network updated (${rewards.map(r => r.provider.name + ':' + r.reward.toFixed(1)).join(', ')})`);
+  }
+  
+  updateRiskMatrix();
+}
+
+function renderRLEpochs(rewards) {
+  const el = document.getElementById('rlEpochs');
+  el.innerHTML = `<div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-dim);margin-bottom:6px">Epoch ${state.rlEpochs}</div>`;
+  rewards.forEach(r => {
+    const pct = Math.max(0, Math.min(100, (r.reward + 10) / 20 * 100));
+    const color = r.reward > 0 ? 'var(--green)' : r.reward > -5 ? 'var(--orange)' : 'var(--red)';
+    el.innerHTML += `
+      <div class="rl-epoch">
+        <span style="width:40px;color:${r.provider.color}">${r.provider.name}</span>
+        <div class="epoch-bar"><div class="epoch-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span style="width:36px;text-align:right;color:${color}">${r.reward > 0 ? '+' : ''}${r.reward.toFixed(1)}</span>
+      </div>
+    `;
+  });
+}
+
+// ========== MONITORING ==========
+function monitoringCycle() {
+  const hosted = state.containers.filter(c => c.status === 'hosted');
+  hosted.forEach(c => {
+    const provider = state.providers.find(p => p.id === c.hostedOn);
+    if(!provider) return;
+    
+    // Simulate metrics
+    const isPositive = Math.random() > 0.3;
+    if(isPositive) {
+      // Nothing bad
+    } else {
+      const severity = Math.random();
+      if(severity > 0.8) {
+        addLog('warn', `[${c.id}] ${provider.name} — anomalous network traffic detected`);
+        provider.score = Math.max(1, provider.score - 0.1);
+      } else {
+        addLog('info', `[${c.id}] ${provider.name} — metrics nominal`);
+      }
+    }
+    document.getElementById(`score-${provider.id}`).textContent = provider.score.toFixed(2);
+  });
+}
+
+// ========== RISK MATRIX ==========
+function renderRiskMatrix() {
+  const el = document.getElementById('riskRows');
+  el.innerHTML = '';
+  state.providers.forEach(p => {
+    const pct = (p.score / 10) * 100;
+    const color = p.score > 7 ? 'var(--green)' : p.score > 4 ? 'var(--orange)' : 'var(--red)';
+    el.innerHTML += `
+      <div class="risk-row">
+        <span class="risk-label" style="color:${p.color}">${p.name}</span>
+        <div class="risk-bar-track"><div class="risk-bar-val" id="rbar-${p.id}" style="width:${pct}%;background:${p.color}"></div></div>
+        <span class="risk-num" id="rnum-${p.id}" style="color:${color}">${p.score.toFixed(1)}</span>
+      </div>
+    `;
+  });
+}
+
+function updateRiskMatrix() {
+  state.providers.forEach(p => {
+    const pct = (p.score / 10) * 100;
+    const color = p.score > 7 ? 'var(--green)' : p.score > 4 ? 'var(--orange)' : 'var(--red)';
+    const bar = document.getElementById(`rbar-${p.id}`);
+    const num = document.getElementById(`rnum-${p.id}`);
+    if(bar) { bar.style.width = pct + '%'; bar.style.background = p.color; }
+    if(num) { num.textContent = p.score.toFixed(1); num.style.color = color; }
+  });
+}
+
+// ========== CONTAINER LIST RENDERING ==========
+function renderContainerList() {
+  const el = document.getElementById('containerList');
+  el.innerHTML = '';
+  state.containers.forEach(c => {
+    const statusColors = {
+      parsing:'parsing',scoring:'scoring',deploying:'deploying',hosted:'hosted',migrating:'migrating'
+    };
+    const barColor = c.status === 'hosted' ? 'var(--green)' : c.status === 'migrating' ? 'var(--pink)' : 'var(--accent)';
+    const providerLabel = c.hostedOn ? state.providers.find(p=>p.id===c.hostedOn)?.name : '—';
+    
+    el.innerHTML += `
+      <div class="container-card ${c.id === state.activeContainer ? 'active' : ''}" onclick="selectContainer('${c.id}')">
+        <div class="cc-header">
+          <span class="cc-name">${c.id}</span>
+          <span class="cc-status ${statusColors[c.status]}">${c.status}</span>
+        </div>
+        <div class="cc-images">${c.name} · ${c.images.length} images · Host: ${providerLabel}</div>
+        <div class="cc-bar"><div class="cc-bar-fill" style="width:${c.progress}%;background:${barColor}"></div></div>
+      </div>
+    `;
+  });
+}
+
+function selectContainer(id) {
+  state.activeContainer = id;
+  renderContainerList();
+  const c = state.containers.find(x => x.id === id);
+  if(!c) return;
+  // Show dockerfile preview at top of container list
+  const list = document.getElementById('containerList');
+  const preview = document.createElement('div');
+  preview.className = 'dockerfile-preview';
+  preview.innerHTML = c.dockerfile;
+  list.insertBefore(preview, list.firstChild);
+}
+
+// ========== DOCKERFILE GENERATION ==========
+function generateDockerfile(images) {
+  const base = images[0].toLowerCase();
+  let lines = [
+    `<span class="comment"># Application container build file</span>`,
+    `<span class="kw">FROM</span> <span class="str">${base}:22.04</span>`,
+    `<span class="kw">RUN</span> apt-get update && apt-get install -y \\`,
+  ];
+  images.slice(1).forEach(img => {
+    lines.push(`    <span class="str">${img.toLowerCase()}-lib</span> \\`);
+  });
+  lines.push(`    && rm -rf /var/lib/apt/lists/*`);
+  lines.push(`<span class="kw">COPY</span> configfiles /app/config`);
+  lines.push(`<span class="kw">WORKDIR</span> /app`);
+  lines.push(`<span class="kw">HEALTHCHECK</span> --interval=30s CMD curl -f http://localhost/health`);
+  lines.push(`<span class="kw">USER</span> <span class="str">appuser</span>`);
+  lines.push(`<span class="kw">EXPOSE</span> 8443`);
+  lines.push(`<span class="kw">CMD</span> [<span class="str">"/bin/bash"</span>, <span class="str">"-c"</span>, <span class="str">"service start"</span>]`);
+  return lines.join('<br>');
+}
+
+// ========== FLOW LINES ==========
+function drawFlowLine(container, provider) {
+  const svg = document.getElementById('flowLines');
+  const mapEl = document.getElementById('mapContainer');
+  const w = mapEl.offsetWidth;
+  const h = mapEl.offsetHeight;
+  
+  // Center of map
+  const cx = w * 0.5;
+  const cy = h * 0.4;
+  
+  const px = parseFloat(provider.x) / 100 * w;
+  const py = parseFloat(provider.y) / 100 * h;
+  
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1', cx);
+  line.setAttribute('y1', cy);
+  line.setAttribute('x2', px);
+  line.setAttribute('y2', py);
+  line.setAttribute('stroke', provider.color);
+  line.setAttribute('stroke-width', '1.5');
+  line.setAttribute('stroke-dasharray', '6 4');
+  line.setAttribute('opacity', '0.5');
+  line.setAttribute('data-container', container.id);
+  line.innerHTML = `<animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1.5s" repeatCount="indefinite"/>`;
+  svg.appendChild(line);
+}
+
+function clearFlowLines(containerId) {
+  const svg = document.getElementById('flowLines');
+  svg.querySelectorAll(`[data-container="${containerId}"]`).forEach(el => el.remove());
+}
+
+// ========== DECISION BANNER ==========
+function showDecision(title, text) {
+  const banner = document.getElementById('decisionBanner');
+  document.getElementById('decisionTitle').textContent = title;
+  document.getElementById('decisionText').textContent = text;
+  banner.style.display = 'block';
+  setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+// ========== LOGGING ==========
+function addLog(type, msg) {
+  const el = document.getElementById('logContainer');
+  const time = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const cls = {ok:'log-ok',fail:'log-fail',warn:'log-warn',info:'log-info',ml:'log-ml'}[type] || 'log-info';
+  
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="log-time">${time}</span><span class="${cls}">${msg}</span>`;
+  el.insertBefore(entry, el.firstChild);
+  
+  // Trim
+  while(el.children.length > 100) el.removeChild(el.lastChild);
+  
+  state.logs.push({type,msg,time});
+  document.getElementById('logCount').textContent = state.logs.length;
+}
+
+// ========== PARTICLES ==========
+function startParticles() {
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  
+  function resize() {
+    const parent = canvas.parentElement;
+    canvas.width = parent.offsetWidth;
+    canvas.height = parent.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  
+  // Create grid dots
+  for(let i = 0; i < 80; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: 1 + Math.random(),
+      alpha: 0.1 + Math.random() * 0.2
+    });
+  }
+  
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw subtle grid
+    ctx.strokeStyle = 'rgba(30,41,59,0.3)';
+    ctx.lineWidth = 0.5;
+    for(let x = 0; x < canvas.width; x += 60) {
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();
+    }
+    for(let y = 0; y < canvas.height; y += 60) {
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();
+    }
+    
+    // Draw connection lines between nearby particles
+    for(let i = 0; i < particles.length; i++) {
+      for(let j = i+1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 100) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(34,211,238,${0.05 * (1 - dist/100)})`;
+          ctx.lineWidth = 0.5;
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    
+    // Draw particles
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(34,211,238,${p.alpha})`;
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+    
+    // Draw world map outline (simplified)
+    drawWorldOutline(ctx, canvas.width, canvas.height);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function drawWorldOutline(ctx, w, h) {
+  ctx.strokeStyle = 'rgba(30,41,59,0.6)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(17,24,39,0.4)';
+  
+  // Simplified continent outlines (relative coords)
+  const continents = [
+    // North America
+    [[0.08,0.25],[0.12,0.18],[0.18,0.15],[0.25,0.18],[0.28,0.25],[0.30,0.35],[0.25,0.42],[0.20,0.45],[0.15,0.42],[0.10,0.35]],
+    // South America
+    [[0.22,0.48],[0.28,0.45],[0.33,0.50],[0.35,0.58],[0.34,0.68],[0.30,0.78],[0.26,0.82],[0.24,0.75],[0.22,0.65],[0.20,0.55]],
+    // Europe
+    [[0.44,0.18],[0.48,0.15],[0.54,0.16],[0.56,0.20],[0.54,0.28],[0.50,0.32],[0.46,0.30],[0.44,0.25]],
+    // Africa
+    [[0.44,0.35],[0.50,0.33],[0.56,0.35],[0.58,0.42],[0.57,0.55],[0.54,0.65],[0.50,0.70],[0.46,0.65],[0.44,0.55],[0.43,0.45]],
+    // Asia
+    [[0.56,0.14],[0.62,0.12],[0.70,0.14],[0.78,0.18],[0.82,0.25],[0.80,0.32],[0.75,0.38],[0.68,0.40],[0.62,0.38],[0.58,0.32],[0.56,0.25]],
+    // Australia
+    [[0.76,0.55],[0.82,0.52],[0.86,0.55],[0.87,0.62],[0.84,0.68],[0.78,0.68],[0.75,0.62]]
+  ];
+  
+  continents.forEach(points => {
+    ctx.beginPath();
+    points.forEach((p, i) => {
+      const x = p[0] * w;
+      const y = p[1] * h;
+      if(i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  });
+}
+
+// ========== UTILS ==========
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function shuffleArray(arr) { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr; }
+function startClock() {
+  setInterval(() => {
+    document.getElementById('statusClock').textContent = new Date().toLocaleTimeString('en-US',{hour12:false});
+  }, 1000);
+}
+function showProviderDetail(p) {
+  addLog('info', `Provider ${p.name} (${p.city}): Current aggregate score ${p.score.toFixed(2)}`);
+}
+
+// ========== GO ==========
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

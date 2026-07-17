@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Igor M. Vieira — Patent Portfolio</title>
+<meta name="description" content="Quatro patentes US, atribuídas à Kyndryl, reconstruídas como demonstrações interativas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080b12;
+  --surface:#0d121c;
+  --surface2:#111826;
+  --border:#1b2436;
+  --border2:#273248;
+  --text:#e6ebf4;
+  --dim:#7688a3;
+  --faint:#485468;
+  --cyan:#22d3ee;
+  --indigo:#818cf8;
+  --green:#34d399;
+  --amber:#fbbf24;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',system-ui,sans-serif;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* ambient grid backdrop */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(var(--border) 1px,transparent 1px),
+    linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 0%,transparent 70%);
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 0%,transparent 70%);
+  opacity:.5;
+}
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px}
+
+/* top bar */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 0;border-bottom:1px solid var(--border);
+}
+.topbar .id{
+  font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;
+  letter-spacing:.2px;display:flex;align-items:center;gap:10px;
+}
+.topbar .id .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.topbar .status{font-size:11.5px;color:var(--dim);letter-spacing:.4px}
+.topbar .status b{color:var(--text);font-weight:500}
+
+/* hero */
+.hero{padding:80px 0 56px}
+.eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;
+  letter-spacing:2.5px;text-transform:uppercase;color:var(--cyan);
+  display:flex;align-items:center;gap:12px;margin-bottom:24px;
+}
+.eyebrow::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent);max-width:200px}
+.hero h1{
+  font-family:'Space Grotesk',sans-serif;font-weight:700;
+  font-size:clamp(34px,6vw,58px);line-height:1.04;letter-spacing:-1.5px;
+  max-width:16ch;margin-bottom:22px;
+}
+.hero h1 em{font-style:normal;color:var(--indigo)}
+.hero p{font-size:16.5px;color:var(--dim);max-width:52ch}
+.hero p a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--border2)}
+.hero p a:hover{border-color:var(--cyan)}
+
+/* section label */
+.reg-label{
+  display:flex;align-items:baseline;justify-content:space-between;
+  padding:0 0 14px;margin-top:24px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--border);
+}
+
+/* registry rows */
+.registry{margin-bottom:72px}
+.rec{
+  display:grid;grid-template-columns:1fr auto;gap:16px 28px;align-items:center;
+  padding:26px 20px;margin:0 -20px;
+  border-bottom:1px solid var(--border);
+  text-decoration:none;color:inherit;
+  position:relative;transition:background .18s ease;
+}
+.rec::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--cyan);transform:scaleY(0);transform-origin:top;transition:transform .22s ease;
+}
+.rec:hover{background:var(--surface)}
+.rec:hover::before{transform:scaleY(1)}
+.rec:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px;background:var(--surface)}
+.rec-main{min-width:0}
+.rec-num{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:15px;
+  color:var(--text);letter-spacing:.3px;margin-bottom:7px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.chip{
+  font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:3px;
+  border:1px solid var(--border2);color:var(--dim);
+}
+.chip.granted{color:var(--green);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.06)}
+.chip.published{color:var(--amber);border-color:rgba(251,191,36,.32);background:rgba(251,191,36,.06)}
+.rec-title{
+  font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:18px;
+  letter-spacing:-.2px;margin-bottom:5px;
+}
+.rec-desc{font-size:13.5px;color:var(--dim);max-width:56ch}
+.rec-go{
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
+  color:var(--dim);white-space:nowrap;display:flex;align-items:center;gap:8px;
+  transition:color .18s ease,gap .18s ease;
+}
+.rec:hover .rec-go{color:var(--cyan);gap:12px}
+.rec-go .arrow{font-size:15px;line-height:1}
+
+/* footer */
+.foot{
+  border-top:1px solid var(--border);padding:32px 0 60px;
+  display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center;justify-content:space-between;
+  font-size:12.5px;color:var(--faint);
+}
+.foot .creds{display:flex;flex-wrap:wrap;gap:8px 16px;font-family:'JetBrains Mono',monospace;letter-spacing:.3px}
+.foot a{color:var(--dim);text-decoration:none}
+.foot a:hover{color:var(--cyan)}
+
+@media(max-width:600px){
+  .rec{grid-template-columns:1fr;gap:14px}
+  .rec-go{justify-content:flex-start}
+  .topbar .status{display:none}
+  .hero{padding:56px 0 40px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="id"><span class="dot"></span>Igor M. Vieira</div>
+    <div class="status"><b>3</b> concedidas · <b>1</b> publicada · assignee <b>Kyndryl</b></div>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">Patent Portfolio</div>
+    <h1>Quatro invenções, reconstruídas como <em>demos interativas</em>.</h1>
+    <p>Cada patente abaixo abre uma simulação navegável do mecanismo que ela protege — do scoring de containers ao controle SCADA de vazão. Feito por <a href="https://github.com/imv7" target="_blank" rel="noopener">Igor Vieira</a>, CISA, auditor de TI na Kyndryl.</p>
+  </section>
+
+  <div class="reg-label"><span>Registro de patentes</span><span>US · 4 registros</span></div>
+
+  <main class="registry">
+
+    <a class="rec" href="container-security-engine.html">
+      <div class="rec-main">
+        <div class="rec-num">US 12,112,155 B2 <span class="chip granted">Concedida</span></div>
+        <div class="rec-title">ML Scoring Engine — Container Hosting Security</div>
+        <div class="rec-desc">Hospedagem autônoma de containers que pontua e libera imagens conforme o risco de segurança, com análise em tempo de execução.</div>
+      </div>
+      <div class="rec-go">abrir demo <span class="arrow">→</span></div>
+    </a>
+
+    <a class="rec" href="dmse_simulation.html">
+      <div class="rec-main">
+        <div class="rec-num">US 11,290,772 B2 <span class="chip granted">Concedida</span></div>
+        <div class="rec-title">DMSE — Multi-Source Content Display</div>
+        <div class="rec-desc">Exibição simultânea de múltiplas fontes de conteúdo em uma única superfície, com coordenação de frequência por usuário.</div>
+      </div>
+      <div class="rec-go">abrir demo <span class="arrow">→</span></div>
+    </a>
+
+    <a class="rec" href="pourcontrol-detection.html">
+      <div class="rec-main">
+        <div class="rec-num">US 11,117,794 B2 <span class="chip granted">Concedida</span></div>
+        <div class="rec-title">PourControl SCADA — Detection Mechanics</div>
+        <div class="rec-desc">Controle em malha fechada para vazão autônoma de líquidos, com a mecânica de detecção do processo industrial.</div>
+      </div>
+      <div class="rec-go">abrir demo <span class="arrow">→</span></div>
+    </a>
+
+    <a class="rec" href="noc-visual.html">
+      <div class="rec-main">
+        <div class="rec-num">US 2022/0188213 A1 <span class="chip published">Publicada</span></div>
+        <div class="rec-title">NOC — RL Script Selector</div>
+        <div class="rec-desc">Aprendizado por reforço que seleciona scripts de remediação a partir de uma base de conhecimento, gerando playbooks de automação.</div>
+      </div>
+      <div class="rec-go">abrir demo <span class="arrow">→</span></div>
+    </a>
+
+  </main>
+
+  <footer class="foot">
+    <div class="creds"><span>CISA</span><span>Kyndryl · GAO</span><span>Brasília, BR</span></div>
+    <div><a href="https://github.com/imv7" target="_blank" rel="noopener">github.com/imv7</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
