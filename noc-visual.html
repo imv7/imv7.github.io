@@ -2,744 +2,485 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NOC — RL Script Selector (Visual)</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US 2022/0188213 A1 — Script Grand Prix</title>
+<meta name="description" content="Interactive demo of US 2022/0188213 A1 — Selecting automation scripts using reinforced learning. Candidate scripts race through a state machine; fewest penalty points wins deployment.">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
---bg:#06080c;--s1:#0a0e15;--s2:#10151e;--s3:#161d2a;--s4:#1e2738;
---brd:#1a2233;--brd2:#253045;
---t1:#d8dde8;--t2:#8694ab;--t3:#4d5a72;
---g:#00e68a;--g2:#00c472;--b:#3d8bfd;--b2:#2970e0;
---a:#ffb020;--r:#ff4757;--c:#00d4ff;--p:#b07aff;
---mono:'IBM Plex Mono',monospace;--sans:'Instrument Sans',sans-serif;
+--bg:#0b0e12;--s1:#12161d;--s2:#191f29;--s3:#232b39;
+--bd:#252e3d;--bd2:#3a4761;
+--t1:#e9edf3;--t2:#8e99ad;--t3:#59637a;
+--green:#2fe08c;--red:#ff5d6e;--amber:#ffc148;--blue:#4da3ff;--cyan:#2fd6d0;--purple:#a98cff;--pink:#ff7ab8;
+--mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
 }
-html{font-size:12px}
-body{background:var(--bg);color:var(--t1);font-family:var(--sans);height:100vh;overflow:hidden;display:flex;flex-direction:column}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:2px}::-webkit-scrollbar-track{background:transparent}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);line-height:1.5;-webkit-text-size-adjust:100%;overflow-x:hidden}
+.wrap{max-width:920px;margin:0 auto;padding:0 14px 90px}
 
-.top{height:36px;background:var(--s1);border-bottom:1px solid var(--brd);display:flex;align-items:center;padding:0 1rem;gap:.8rem;flex-shrink:0}
-.top-logo{font-family:var(--mono);font-weight:700;font-size:.95rem;color:var(--g)}
-.sep{width:1px;height:16px;background:var(--brd)}
-.tstat{font-family:var(--mono);font-size:.6rem;color:var(--t3);display:flex;align-items:center;gap:.25rem}
-.tstat .v{font-weight:600}
-.tstat .v.ok{color:var(--g)}.tstat .v.w{color:var(--a)}.tstat .v.c{color:var(--r)}
-.top-r{margin-left:auto;display:flex;align-items:center;gap:.6rem}
-.ldot{width:6px;height:6px;border-radius:50%;background:var(--g);animation:lp 1.5s infinite}
-@keyframes lp{0%,100%{box-shadow:0 0 0 0 rgba(0,230,138,.5)}50%{box-shadow:0 0 0 4px rgba(0,230,138,0)}}
-.upt{font-family:var(--mono);font-size:.6rem;color:var(--t2)}
+/* ============ HEADER ============ */
+header{padding:34px 0 8px;text-align:center}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--green);text-transform:uppercase}
+h1{font-size:clamp(26px,6vw,44px);font-weight:700;letter-spacing:-.5px;margin:8px 0 6px}
+h1 .flag{color:var(--t2);font-weight:400}
+.patent-tag{font-family:var(--mono);font-size:12px;color:var(--t2)}
+.patent-tag a{color:var(--blue);text-decoration:none}
+.patent-tag a:hover{text-decoration:underline}
+.lede{max-width:660px;margin:14px auto 0;color:var(--t2);font-size:15px}
+.lede b{color:var(--t1)}
+.checker{height:10px;max-width:340px;margin:20px auto 0;background:repeating-conic-gradient(#fff 0 90deg,#0b0e12 0 180deg) 0 0/10px 10px;border-radius:3px;opacity:.5}
 
-.main{flex:1;display:grid;grid-template-columns:220px 1fr 220px;overflow:hidden}
+/* ============ SECTION SHELL ============ */
+section{margin:24px 0;border:1px solid var(--bd);border-radius:14px;background:var(--s1);overflow:hidden}
+.sec-h{display:flex;align-items:baseline;gap:10px;padding:13px 16px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.sec-h .num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);background:rgba(47,224,140,.08);border:1px solid rgba(47,224,140,.3);border-radius:5px;padding:2px 8px}
+.sec-h h2{font-size:16px;font-weight:700}
+.sec-h .sub{font-size:11.5px;color:var(--t3);font-family:var(--mono);margin-left:auto}
+.sec-b{padding:16px}
+@media(max-width:480px){.sec-b{padding:12px}}
+.hint{font-size:12.5px;color:var(--t3)}
+.hint b{color:var(--t1)}
 
-/* LEFT */
-.lcol{background:var(--s1);border-right:1px solid var(--brd);display:flex;flex-direction:column;overflow:hidden}
-.chdr{padding:.4rem .6rem;border-bottom:1px solid var(--brd);font-family:var(--mono);font-size:.55rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
-.chdr .ct{background:var(--s3);padding:1px 5px;border-radius:3px;font-size:.5rem;color:var(--t2)}
+/* ============ PROBLEMS ============ */
+.probs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.prob{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:14px;cursor:pointer;transition:all .2s;position:relative}
+.prob:hover{border-color:var(--green);transform:translateY(-2px)}
+.prob.sel{border-color:var(--green);box-shadow:0 0 0 1px var(--green),0 8px 30px rgba(47,224,140,.12)}
+.prob .sev{position:absolute;top:12px;right:12px;font-family:var(--mono);font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:4px}
+.sev.crit{background:rgba(255,93,110,.15);color:var(--red)}
+.sev.high{background:rgba(255,193,72,.15);color:var(--amber)}
+.prob .pt{font-family:var(--mono);font-weight:700;font-size:14px;padding-right:56px}
+.prob .pd{color:var(--t2);font-size:12.5px;margin-top:4px}
+.prob .pk{margin-top:8px;display:flex;gap:5px;flex-wrap:wrap}
+.kw{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid var(--bd2);color:var(--t2)}
+.runbar{display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap}
+.btn{font-family:var(--mono);font-size:13px;font-weight:700;padding:11px 20px;border-radius:8px;border:1px solid var(--bd2);background:var(--s2);color:var(--t1);cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.btn:hover{border-color:var(--green);color:var(--green)}
+.btn.primary{background:var(--green);border-color:var(--green);color:#06130c}
+.btn.primary:hover{filter:brightness(1.12);color:#06130c}
+.btn:disabled{opacity:.35;cursor:default;pointer-events:none}
+@media(max-width:480px){.btn{flex:1;text-align:center;padding:12px 12px}}
 
-.nd{padding:.4rem .6rem;border-bottom:1px solid var(--brd)}
-.nd-top{display:flex;align-items:center;gap:.35rem;margin-bottom:.25rem}
-.nd-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.nd-dot.ok{background:var(--g)}.nd-dot.warn{background:var(--a)}.nd-dot.crit{background:var(--r);animation:cp .7s infinite}
-@keyframes cp{0%,100%{opacity:1}50%{opacity:.3}}
-.nd-name{font-family:var(--mono);font-size:.6rem;font-weight:600;flex:1}
-.nd-type{font-size:.5rem;color:var(--t3);font-family:var(--mono)}
-.nd-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:.2rem}
-.mb{text-align:center}
-.mb-l{font-size:.45rem;color:var(--t3);font-family:var(--mono)}
-.mb-v{font-family:var(--mono);font-size:.6rem;font-weight:600}
-.mb-bar{height:2px;border-radius:1px;background:var(--s4);margin-top:1px;overflow:hidden}
-.mb-f{height:100%;border-radius:1px;transition:width .6s,background .3s}
+/* ============ SCOUT ============ */
+.scout{display:grid;grid-template-columns:200px 1fr;gap:14px}
+@media(max-width:700px){.scout{grid-template-columns:1fr}}
+.kbcol{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:12px;text-align:center}
+.kbcol .kbi{font-size:34px}
+.kbcol .kbl{font-family:var(--mono);font-size:11px;color:var(--t2);margin-top:4px}
+.kbcol .radar{margin:10px auto 0;width:70px;height:70px;border-radius:50%;border:1px solid var(--bd2);position:relative;overflow:hidden}
+.kbcol .radar::before{content:'';position:absolute;left:50%;top:50%;width:50%;height:2px;background:linear-gradient(90deg,var(--green),transparent);transform-origin:left;animation:sweep 1.6s linear infinite}
+@keyframes sweep{to{transform:rotate(360deg)}}
+.kbcol .radar.idle::before{animation-play-state:paused;opacity:.2}
+.cands{display:flex;flex-direction:column;gap:8px}
+.cand{display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;opacity:0;transform:translateX(16px);transition:all .4s}
+.cand.show{opacity:1;transform:none}
+.cand .ci{font-size:20px}
+.cand .cn{flex:1;min-width:0}
+.cand .cn b{font-family:var(--mono);font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cand .cn small{font-size:10.5px;color:var(--t3);font-family:var(--mono)}
+.cand .sim{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px;background:var(--s3)}
+.cand .simbar{width:64px;height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
+.cand .simfill{height:100%;border-radius:2px;width:0;transition:width .8s ease}
+@media(max-width:480px){.cand .simbar{display:none}}
 
-/* CENTER */
-.ccol{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+/* ============ PIT CREW / OPTIMIZER ============ */
+.opt{background:#0d1117;border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.opt-h{font-family:var(--mono);font-size:11px;color:var(--t3);padding:8px 12px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between}
+.opt-b{padding:10px 0;font-family:var(--mono);font-size:12.5px;line-height:1.9;overflow-x:auto}
+.ol{padding:0 14px;white-space:pre}
+.ol .ln{color:var(--t3);display:inline-block;width:24px;user-select:none}
+.ol .bad-cmd{background:rgba(255,193,72,.13);color:var(--amber);border-bottom:1px dashed var(--amber);border-radius:2px;padding:0 3px}
+.ol .good-cmd{background:rgba(47,224,140,.13);color:var(--green);border-radius:2px;padding:0 3px}
+.mapnote{margin-top:12px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--t2);display:none}
+.mapnote b{color:var(--t1)}
+.mapnote .arrow{color:var(--green);font-family:var(--mono)}
 
-/* State Machine Canvas */
-.sm-wrap{position:relative;flex:1;min-height:0}
-#smCanvas{width:100%;height:100%;display:block}
-.sm-overlay{position:absolute;bottom:8px;left:8px;right:8px;display:flex;gap:6px;pointer-events:none}
-.sm-legend{font-family:var(--mono);font-size:.5rem;color:var(--t3);display:flex;align-items:center;gap:3px}
-.sm-legend .ld{width:8px;height:8px;border-radius:50%}
+/* ============ THE RACE ============ */
+.arena-note{font-family:var(--mono);font-size:11px;color:var(--t3);background:rgba(77,163,255,.06);border:1px dashed rgba(77,163,255,.35);border-radius:9px;padding:9px 13px;margin-bottom:14px}
+.arena-note b{color:var(--blue)}
+.trackmap{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:14px;font-family:var(--mono);font-size:10px;color:var(--t3)}
+.tm-s{border:1px solid var(--bd2);border-radius:5px;padding:3px 8px}
+.tm-a{color:var(--t3)}
+.tm-s.pit{border-style:dashed;color:var(--amber)}
+.tm-s.crash{border-color:rgba(255,93,110,.5);color:var(--red)}
+.tm-r{color:var(--t3)}
+.lanes{display:flex;flex-direction:column;gap:10px}
+.lane{background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:10px 12px;position:relative;transition:all .4s}
+.lane.winner{border-color:var(--green);box-shadow:0 0 0 1px var(--green),0 10px 30px rgba(47,224,140,.13)}
+.lane.out{opacity:.55}
+.lane-top{display:flex;align-items:center;gap:9px;margin-bottom:8px;flex-wrap:wrap}
+.lane-top .li{font-size:16px}
+.lane-top b{font-family:var(--mono);font-size:12.5px}
+.lane-top .st{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;background:var(--s3);color:var(--t2);margin-left:auto}
+.lane-top .st.run{color:var(--blue);background:rgba(77,163,255,.1)}
+.lane-top .st.wait{color:var(--amber);background:rgba(255,193,72,.1)}
+.lane-top .st.done{color:var(--green);background:rgba(47,224,140,.1)}
+.lane-top .st.dead{color:var(--red);background:rgba(255,93,110,.1)}
+.lane-top .score{font-family:var(--mono);font-size:15px;font-weight:700;width:44px;text-align:right}
+.track{position:relative;height:26px;background:var(--s3);border-radius:13px;overflow:visible}
+.track .seg{position:absolute;top:0;bottom:0;border-left:1px dashed rgba(255,255,255,.12)}
+.track .seglbl{position:absolute;top:100%;font-family:var(--mono);font-size:8px;color:var(--t3);transform:translateX(-50%);padding-top:2px;white-space:nowrap}
+.runner{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;transition:left .55s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 0 12px currentColor;z-index:2}
+.runner.pitstop{animation:pitbounce .5s ease infinite alternate}
+@keyframes pitbounce{to{transform:translate(-50%,-72%)}}
+.runner.crashed{animation:none;filter:grayscale(1)}
+.pop{position:absolute;font-family:var(--mono);font-size:11px;font-weight:700;transform:translate(-50%,0);animation:popup 1.1s ease forwards;pointer-events:none;z-index:3}
+@keyframes popup{0%{opacity:0;margin-top:0}15%{opacity:1}100%{opacity:0;margin-top:-26px}}
+.lane .path{font-family:var(--mono);font-size:9.5px;color:var(--t3);margin-top:14px;min-height:14px;letter-spacing:.3px;overflow-x:auto;white-space:nowrap}
+.lane .path .hop{color:var(--t2)}
+.lane .path .pen{color:var(--red)}
 
-/* Incident + Runners Panel */
-.bottom-panel{flex-shrink:0;background:var(--s1);border-top:1px solid var(--brd);max-height:45%;overflow-y:auto}
-.inc-bar{padding:.4rem .6rem;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:.5rem}
-.inc-sev{font-family:var(--mono);font-size:.45rem;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase}
-.inc-sev.critical{background:rgba(255,71,87,.15);color:var(--r)}
-.inc-sev.high{background:rgba(255,176,32,.15);color:var(--a)}
-.inc-sev.medium{background:rgba(61,139,253,.15);color:var(--b)}
-.inc-title{font-family:var(--mono);font-size:.6rem;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.inc-phase{font-family:var(--mono);font-size:.5rem;color:var(--t2)}
-.inc-time{font-family:var(--mono);font-size:.5rem;color:var(--t3)}
+/* leaderboard + podium */
+.board{margin-top:16px;display:none}
+.board h3{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+.podium{display:flex;align-items:flex-end;gap:8px;justify-content:center;margin:8px 0 4px}
+.pod{text-align:center;flex:1;max-width:150px}
+.pod .cup{font-size:22px}
+.pod .pname{font-family:var(--mono);font-size:10.5px;margin:4px 0;word-break:break-all}
+.pod .pscore{font-family:var(--mono);font-size:13px;font-weight:700}
+.pod .block{border-radius:8px 8px 0 0;margin-top:6px;background:var(--s3);border:1px solid var(--bd2);border-bottom:none}
+.pod.p1 .block{height:64px;background:linear-gradient(180deg,rgba(47,224,140,.25),var(--s3))}
+.pod.p2 .block{height:44px}
+.pod.p3 .block{height:30px}
+.deployline{margin-top:12px;font-size:13.5px;color:var(--t2);background:var(--s2);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:10px 14px;display:none}
+.deployline b{color:var(--t1)}
+/* reward table */
+.rewards-tbl{margin-top:14px;font-family:var(--mono);font-size:10.5px;color:var(--t3);display:flex;gap:6px;flex-wrap:wrap}
+.rw{border:1px solid var(--bd);border-radius:5px;padding:3px 8px}
+.rw b{color:var(--red)}
 
-/* Runner rows */
-.rn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
-.rn{padding:.5rem .6rem;border-bottom:1px solid var(--brd);border-right:1px solid var(--brd)}
-.rn.winner{background:rgba(0,230,138,.03)}
-.rn.loser{opacity:.5}
-.rn-top{display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem}
-.rn-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
-.rn-name{font-family:var(--mono);font-size:.6rem;font-weight:600;flex:1}
-.rn-score{font-family:var(--mono);font-size:.8rem;font-weight:700}
-.rn-state{font-family:var(--mono);font-size:.5rem;padding:1px 5px;border-radius:3px;background:var(--s3);color:var(--t2)}
-.rn-path{display:flex;align-items:center;gap:2px;flex-wrap:wrap;margin-top:.2rem}
-.rn-ps{font-family:var(--mono);font-size:.45rem;padding:1px 4px;border-radius:2px;background:var(--s3);color:var(--t3)}
-.rn-ps.cur{color:var(--b);border:1px solid var(--b);background:rgba(61,139,253,.08)}
-.rn-ps.pass{color:var(--g);border:1px solid var(--g)}
-.rn-ps.fail{color:var(--r);border:1px solid var(--r)}
-.rn-arr{font-size:.4rem;color:var(--t3)}
-.rn-rewards{display:flex;gap:2px;margin-top:.25rem;flex-wrap:wrap}
-.rn-rw{font-family:var(--mono);font-size:.45rem;padding:1px 4px;border-radius:2px;background:var(--s3)}
-.rn-bar{height:3px;border-radius:2px;background:var(--s4);margin-top:.25rem;overflow:hidden}
-.rn-bf{height:100%;border-radius:2px;transition:width .5s}
+/* ============ LOG ============ */
+.logbox{background:#0c0f14;border:1px solid var(--bd);border-radius:9px;padding:9px 13px;font-family:var(--mono);font-size:11px;line-height:1.9;max-height:180px;overflow-y:auto;color:var(--t2)}
+.logbox .lt{color:var(--t3)}
+.logbox .ok{color:var(--green)}.logbox .warn{color:var(--amber)}.logbox .err{color:var(--red)}.logbox .info{color:var(--blue)}.logbox .pur{color:var(--purple)}
 
-/* Explanation overlay on state machine */
-.sm-explain{position:absolute;top:6px;left:6px;font-family:var(--mono);font-size:.5rem;color:var(--t3);max-width:260px;line-height:1.5;pointer-events:none}
-.sm-explain .hl{color:var(--a);font-weight:600}
-
-/* RIGHT */
-.rcol{background:var(--s1);border-left:1px solid var(--brd);display:flex;flex-direction:column;overflow:hidden}
-.vec{display:flex;align-items:center;gap:.35rem;padding:.35rem .5rem;margin:1px .3rem;border-radius:4px;border:1px solid transparent;background:transparent;cursor:pointer;transition:all .12s;color:var(--t2);font-size:.6rem;font-family:var(--sans);width:calc(100% - .6rem);text-align:left}
-.vec:hover{background:var(--s2);border-color:var(--brd2)}
-.vec:active{transform:scale(.97)}
-.vec.cd{opacity:.25;pointer-events:none}
-.vi{font-size:.8rem;width:16px;text-align:center;flex-shrink:0}
-.vn{font-weight:600;font-size:.6rem}
-.vd{font-family:var(--mono);font-size:.45rem;color:var(--t3);margin-top:1px}
-.vf{font-family:var(--mono);font-size:.45rem;color:var(--a);margin-left:auto;opacity:0;transition:opacity .1s}
-.vec:hover .vf{opacity:1}
-
-.logp{flex:1;overflow-y:auto;background:var(--bg);padding:.2rem .4rem;font-family:var(--mono);font-size:.5rem;line-height:1.6;border-top:1px solid var(--brd)}
-.le{animation:fi .15s ease}@keyframes fi{from{opacity:0}to{opacity:1}}
-.lt{color:var(--t3);margin-right:.3rem}.li{color:var(--b)}.lw{color:var(--a)}.lr{color:var(--r)}.ls{color:var(--g)}.lp{color:var(--p)}.lc{color:var(--c)}
-
-/* Bottom bar */
-.bbar{height:24px;background:var(--s1);border-top:1px solid var(--brd);display:flex;align-items:center;padding:0 .6rem;gap:.6rem;flex-shrink:0;overflow-x:auto}
-.bi{font-family:var(--mono);font-size:.5rem;color:var(--t3);white-space:nowrap;display:flex;align-items:center;gap:.2rem}
-.bi .bd{width:4px;height:4px;border-radius:50%}
-
-.toast-z{position:fixed;top:42px;right:10px;z-index:90;display:flex;flex-direction:column;gap:.25rem;pointer-events:none}
-.toast{font-family:var(--mono);font-size:.55rem;padding:.35rem .6rem;border-radius:4px;background:var(--s2);border:1px solid var(--brd);color:var(--t1);animation:tIn .2s ease;box-shadow:0 4px 16px rgba(0,0,0,.5)}
-@keyframes tIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-.toast.ts{border-color:var(--g);color:var(--g)}.toast.tw{border-color:var(--a);color:var(--a)}.toast.te{border-color:var(--r);color:var(--r)}
+footer{margin-top:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--t3);line-height:1.9}
+footer a{color:var(--blue);text-decoration:none}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--s3);border:1px solid var(--bd2);color:var(--t1);font-family:var(--mono);font-size:12px;padding:10px 18px;border-radius:8px;transition:transform .3s;z-index:500;max-width:92vw;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
-<div class="top">
-  <div class="top-logo">NOC RL</div><div class="sep"></div>
-  <div class="tstat">Nodes <span class="v ok" id="tN">8</span></div>
-  <div class="tstat">Healthy <span class="v ok" id="tH">8</span></div>
-  <div class="tstat">Incidents <span class="v" id="tI">0</span></div>
-  <div class="tstat">Resolved <span class="v ok" id="tR">0</span></div>
-  <div class="tstat">Failed <span class="v" id="tF">0</span></div>
-  <div class="tstat">Rate <span class="v ok" id="tRt">—</span></div>
-  <div class="top-r"><div class="upt" id="upt">00:00:00</div><div class="ldot"></div><span style="font-family:var(--mono);font-size:.5rem;color:var(--g)">LIVE</span></div>
-</div>
+<div class="wrap">
 
-<div class="main">
-  <div class="lcol">
-    <div class="chdr">Infrastructure <span class="ct">8 nodes</span></div>
-    <div style="flex:1;overflow-y:auto" id="infraList"></div>
-  </div>
+<header>
+  <div class="kicker">Interactive patent demo</div>
+  <h1>Script <span class="flag">Grand&nbsp;Prix</span> 🏁</h1>
+  <div class="patent-tag"><a href="https://patents.google.com/patent/US20220188213A1/en" target="_blank" rel="noopener">US 2022/0188213 A1</a> · Selecting Automation Scripts Using Reinforced Learning · Kyndryl · Manhaes, Das Neves, Varga, Monteiro Vieira, Todari</div>
+  <p class="lede">An incident fires. Four candidate fix-scripts think they can handle it. Instead of trusting one, the patent <b>races them all</b> — in a cloned replica of production, through a 7-state machine where every move costs <b>penalty points</b>. Waiting? −2. Crash? −3. Fail to fix it? <b>−9</b>. Closest to zero takes the podium and gets deployed for real.</p>
+  <div class="checker"></div>
+</header>
 
-  <div class="ccol">
-    <div class="sm-wrap" id="smWrap">
-      <canvas id="smCanvas"></canvas>
-      <div class="sm-explain" id="smExplain">
-        State machine idle. Each script candidate becomes a <span class="hl">runner</span> that traverses states.
-        Transitions carry <span class="hl">reward penalties</span>. Best score wins.
-      </div>
-      <div class="sm-overlay">
-        <div class="sm-legend"><div class="ld" style="background:var(--b)"></div>Running</div>
-        <div class="sm-legend"><div class="ld" style="background:var(--a)"></div>Waiting</div>
-        <div class="sm-legend"><div class="ld" style="background:var(--g)"></div>Succeeded</div>
-        <div class="sm-legend"><div class="ld" style="background:var(--r)"></div>Failed</div>
-        <div class="sm-legend" style="margin-left:auto;color:var(--t3)">Reward penalties on edges</div>
-      </div>
-    </div>
-    <div class="bottom-panel" id="bottomPanel">
-      <div class="chdr">Active evaluation <span class="ct" id="rnCt">0 runners</span></div>
-      <div id="runnersArea" style="font-family:var(--mono);font-size:.55rem;color:var(--t3);padding:.6rem;text-align:center">No active incident</div>
+<!-- 1 · INCIDENT -->
+<section>
+  <div class="sec-h"><span class="num">1</span><h2>The incident — pick a problem statement</h2><span class="sub">problem criteria · FIG. 1 (102)</span></div>
+  <div class="sec-b">
+    <div class="probs" id="probs"></div>
+    <div class="runbar">
+      <button class="btn primary" id="runBtn" onclick="runAll()">🏁 SCOUT &amp; RACE</button>
+      <span class="hint" id="runHint">Pick an incident, then let the engine find and race the candidates.</span>
     </div>
   </div>
+</section>
 
-  <div class="rcol">
-    <div class="chdr">Chaos vectors</div>
-    <div style="flex-shrink:0;overflow-y:auto;max-height:40%" id="vecList"></div>
-    <div class="chdr">Event log</div>
-    <div class="logp" id="logArea"></div>
+<!-- 2 · SCOUT -->
+<section>
+  <div class="sec-h"><span class="num">2</span><h2>The scout — NLP searches the knowledge base</h2><span class="sub">bag-of-words · TF-IDF · FIG. 2</span></div>
+  <div class="sec-b">
+    <div class="scout">
+      <div class="kbcol">
+        <div class="kbi">📚</div>
+        <div class="kbl">knowledge base 444<br>+ indexed forums</div>
+        <div class="radar idle" id="radar"></div>
+      </div>
+      <div class="cands" id="cands"><div class="hint" style="padding:20px;text-align:center">candidates will appear here</div></div>
+    </div>
   </div>
-</div>
+</section>
 
-<div class="bbar" id="bbar"><div class="bi" style="color:var(--t2)">Timeline:</div></div>
-<div class="toast-z" id="toastZ"></div>
+<!-- 3 · PIT CREW -->
+<section>
+  <div class="sec-h"><span class="num">3</span><h2>The pit crew — command optimization</h2><span class="sub">command mapping DB 440 · FIG. 3/4</span></div>
+  <div class="sec-b">
+    <div class="opt">
+      <div class="opt-h"><span id="optName">candidate script</span><span>PRE-RACE INSPECTION</span></div>
+      <div class="opt-b" id="optBody"><div class="ol" style="opacity:.5">— run the race to see a script get optimized —</div></div>
+    </div>
+    <div class="mapnote" id="mapnote"></div>
+  </div>
+</section>
+
+<!-- 4 · RACE -->
+<section>
+  <div class="sec-h"><span class="num">4</span><h2>The race — reinforced learning arena</h2><span class="sub">state machine · FIG. 6 (602–626)</span></div>
+  <div class="sec-b">
+    <div class="arena-note">⛱ Racing happens in a <b>replica of production</b> (506) — clones get hurt, customers don't. Checkpoints (504) report each state change.</div>
+    <div class="trackmap">
+      <span class="tm-s">READY</span><span class="tm-a">−1→</span>
+      <span class="tm-s">RUNNING</span><span class="tm-a">⇄</span>
+      <span class="tm-s pit">WAITING −2,−3,−4…</span><span class="tm-a">→</span>
+      <span class="tm-s">COMPLETED</span><span class="tm-a">→</span>
+      <span class="tm-s">SUCCEEDED −1</span>
+      <span class="tm-a">·</span>
+      <span class="tm-s crash">TERMINATED −3</span>
+      <span class="tm-a">·</span>
+      <span class="tm-s crash">FAILED −9</span>
+    </div>
+    <div class="lanes" id="lanes"></div>
+    <div class="board" id="boardBox">
+      <h3>Podium</h3>
+      <div class="podium" id="podium"></div>
+      <div class="deployline" id="deployline"></div>
+      <div class="rewards-tbl">
+        <span class="rw">ready→running <b>−1</b></span><span class="rw">running→waiting <b>−2⁺</b></span>
+        <span class="rw">waiting→running <b>−1</b></span><span class="rw">running→completed <b>−1</b></span>
+        <span class="rw">completed→succeeded <b>−1</b></span><span class="rw">→terminated <b>−3</b></span><span class="rw">→failed <b>−9</b></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · LOG -->
+<section>
+  <div class="sec-h"><span class="num">5</span><h2>Race control log</h2><span class="sub">checkpoints 504 · execution rules 106</span></div>
+  <div class="sec-b">
+    <div class="logbox" id="log"><div><span class="lt">[00:00]</span> <span class="info">CTRL</span> arena idle · knowledge base indexed · command mapping DB warm</div></div>
+  </div>
+</section>
+
+<footer>
+  Built from the patent's own machinery: NLP script scouting (FIG. 2) · command mapping optimization (FIG. 3–4) ·<br>
+  production-replica simulation (FIG. 5) · the 7-state reward machine with its exact penalties (FIG. 6)<br>
+  <a href="https://patents.google.com/patent/US20220188213A1/en" target="_blank" rel="noopener">Read US 2022/0188213 A1 →</a>
+</footer>
+
+</div>
+<div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════
-// INFRA NODES
-// ═══════════════════════════════════════
-const NODES=[
-  {id:'w1',name:'web-prod-01',type:'nginx',cpu:32,mem:45,disk:42,conn:180,status:'ok'},
-  {id:'w2',name:'web-prod-02',type:'nginx',cpu:28,mem:40,disk:38,conn:165,status:'ok'},
-  {id:'a1',name:'api-prod-01',type:'node.js',cpu:55,mem:62,disk:35,conn:420,status:'ok'},
-  {id:'a2',name:'api-prod-02',type:'node.js',cpu:48,mem:58,disk:33,conn:390,status:'ok'},
-  {id:'d1',name:'db-primary',type:'postgres',cpu:40,mem:70,disk:55,conn:85,status:'ok'},
-  {id:'d2',name:'db-replica',type:'postgres',cpu:25,mem:55,disk:52,conn:40,status:'ok'},
-  {id:'c1',name:'cache-01',type:'redis',cpu:15,mem:78,disk:12,conn:950,status:'ok'},
-  {id:'q1',name:'queue-01',type:'rabbitmq',cpu:20,mem:35,disk:18,conn:220,status:'ok'},
-];
-const TARGETS={nginx:{cpu:30,mem:42,disk:40,conn:175},'node.js':{cpu:50,mem:60,disk:34,conn:400},postgres:{cpu:35,mem:65,disk:54,conn:70},redis:{cpu:14,mem:75,disk:12,conn:900},rabbitmq:{cpu:18,mem:32,disk:17,conn:200}};
+// ═══════════════════════════════════════════════════════════
+// DATA — state machine & rewards straight from FIG. 6.
+// Path = sequence of [state, reward] hops per candidate.
+// R=Ready, N=Running, W=Waiting, C=Completed, T=Terminated,
+// S=Succeeded, F=Failed
+// ═══════════════════════════════════════════════════════════
+const STATES={R:'READY',N:'RUNNING',W:'WAITING',C:'COMPLETED',T:'TERMINATED',S:'SUCCEEDED',F:'FAILED'};
+// track x-positions (%) for the runner per state
+const POS={R:3, N:26, W:44, C:66, T:66, S:94, F:94};
 
-// ═══════════════════════════════════════
-// INCIDENT TEMPLATES
-// ═══════════════════════════════════════
-const ITPL=[
-  {trigger:n=>n.disk>90,sev:'critical',title:n=>`Disk full: ${n.name}`,crit:'Free ≥30% disk',met:'disk',
-   scripts:[
-     {name:'cleanup_old.sh',cmds:['df','find','rm','echo'],type:'sample'},
-     {name:'logrotate_force.sh',cmds:['logrotate','systemctl','df'],type:'sample'},
-     {name:'archive_zstd.sh',cmds:['du','find','tar','gzip','rm','df'],type:'found',sim:.84},
-     {name:'log_pruner.py',cmds:['du','find','truncate','rsync','df'],type:'found',sim:.71},
-   ],fix:n=>{n.disk=Math.max(20,n.disk-45+R()*15)}},
-  {trigger:n=>n.cpu>92,sev:'critical',title:n=>`CPU saturated: ${n.name}`,crit:'CPU <70%',met:'cpu',
-   scripts:[
-     {name:'kill_runaway.sh',cmds:['top','ps','kill','echo'],type:'sample'},
-     {name:'cpu_governor.py',cmds:['ps','nice','renice','systemctl'],type:'found',sim:.76},
-     {name:'autoscale_hpa.sh',cmds:['kubectl','curl','jq','echo'],type:'found',sim:.68},
-   ],fix:n=>{n.cpu=Math.max(25,n.cpu-50+R()*15)}},
-  {trigger:n=>n.mem>93,sev:'high',title:n=>`Memory pressure: ${n.name}`,crit:'Memory <75%',met:'mem',
-   scripts:[
-     {name:'jvm_restart.sh',cmds:['jmap','kill','systemctl','echo'],type:'sample'},
-     {name:'heap_dump.sh',cmds:['jmap','jcmd','tar','curl','systemctl'],type:'found',sim:.80},
-     {name:'gc_tune.sh',cmds:['jcmd','echo','curl'],type:'found',sim:.63},
-   ],fix:n=>{n.mem=Math.max(30,n.mem-40+R()*15)}},
-  {trigger:n=>n.conn<5&&n.type==='postgres',sev:'critical',title:n=>`Conn lost: ${n.name}`,crit:'Restore connections',met:'conn',
-   scripts:[
-     {name:'pg_reconnect.sh',cmds:['pg_isready','systemctl','psql'],type:'sample'},
-     {name:'failover.sh',cmds:['pg_isready','psql','curl','echo'],type:'found',sim:.78},
-     {name:'pool_reset.py',cmds:['psql','kill','systemctl','pg_isready'],type:'found',sim:.69},
-   ],fix:n=>{n.conn=Math.max(30,60+R()*40)}},
-  {trigger:n=>n.conn>1800&&n.type==='redis',sev:'high',title:n=>`Conn storm: ${n.name}`,crit:'Conns <1200',met:'conn',
-   scripts:[
-     {name:'conn_limit.sh',cmds:['redis-cli','iptables','echo'],type:'sample'},
-     {name:'client_cull.py',cmds:['redis-cli','grep','kill','echo'],type:'found',sim:.73},
-   ],fix:n=>{n.conn=Math.max(400,n.conn-1200+R()*200)}},
-];
-const CMAP={echo:'printf',cat:'bat',grep:'rg',gzip:'zstd',curl:'httpie',top:'htop',kill:'pkill',find:'fd'};
+const PROBLEMS={
+ disk:{
+  title:'INC-4021 · Prod DB disk 96% full', sev:'crit',
+  desc:'/var partition on db-prod-03 nearly full; writes will stall.',
+  kws:['disk','full','purge','logs','/var'],
+  opt:{script:'purge_rotated_logs.sh',
+    lines:[
+      {t:'#!/bin/bash'},
+      {t:'df -h /var | tail -1'},
+      {t:'rm -rf /var/log/*.gz', bad:'rm -rf /var/log/*.gz', good:"find /var/log -name '*.gz' -mtime +7 -delete"},
+      {t:'systemctl kill rsyslog', bad:'systemctl kill rsyslog', good:'systemctl restart rsyslog'},
+      {t:'df -h /var | tail -1'},
+    ],
+    note:`Command mapping DB 440: <b>rm -rf glob</b> <span class="arrow">→</span> <b>find … -mtime +7 -delete</b> (age-scoped, no shell-glob blowup) · <b>systemctl kill</b> <span class="arrow">→</span> <b>restart</b> (graceful). The knowledge base ranks these as best-practice replacements; dependent lines adjusted automatically.`},
+  cands:[
+   {id:'a', icon:'🧹', name:'purge_rotated_logs.sh', origin:'knowledge base · ops-repo', sim:94, color:'#2fe08c',
+    path:[['N',-1],['C',-1],['S',-1]], verdict:'fixed the problem'},
+   {id:'b', icon:'📦', name:'compress_and_move.sh', origin:'stack-overflow #48211', sim:87, color:'#4da3ff',
+    path:[['N',-1],['W',-2],['N',-1],['W',-3],['N',-1],['C',-1],['S',-1]], verdict:'fixed it, but kept blocking on I/O'},
+   {id:'c', icon:'💽', name:'expand_disk_lvm.sh', origin:'knowledge base · infra', sim:81, color:'#a98cff',
+    path:[['N',-1],['W',-2],['T',-3],['F',-9]], rule:'wait > 5 s — execution rule violated', verdict:'terminated by race control'},
+   {id:'d', icon:'🔁', name:'restart_db_service.sh', origin:'forum snippet · unranked', sim:66, color:'#ff7ab8',
+    path:[['N',-1],['C',-1],['F',-9]], verdict:'ran fine — disk still 96%'},
+  ]},
+ cpu:{
+  title:'INC-4022 · Zombie processes eating CPU', sev:'high',
+  desc:'app-node-11 load 38; hundreds of defunct workers.',
+  kws:['zombie','cpu','defunct','reap'],
+  opt:{script:'reap_zombies.sh',
+    lines:[
+      {t:'#!/bin/bash'},
+      {t:'ps -eo stat,pid | awk \x27$1~"Z"\x27'},
+      {t:'kill -9 $(pgrep -P 1)', bad:'kill -9 $(pgrep -P 1)', good:'kill -s SIGCHLD $(ps -o ppid= -C defunct | sort -u)'},
+      {t:'uptime'},
+    ],
+    note:`Command mapping DB 440: <b>kill -9 on PID-1 children</b> <span class="arrow">→</span> <b>SIGCHLD to the real parents</b> — zombies can't be killed, their parents must reap them. Knowledge base 444 ranks the signal-the-parent pattern highest.`},
+  cands:[
+   {id:'a', icon:'🪦', name:'reap_zombies.sh', origin:'knowledge base · ops-repo', sim:92, color:'#2fe08c',
+    path:[['N',-1],['W',-2],['N',-1],['C',-1],['S',-1]], verdict:'parents signalled, zombies reaped'},
+   {id:'b', icon:'🔄', name:'restart_worker_pool.sh', origin:'runbook v2', sim:88, color:'#4da3ff',
+    path:[['N',-1],['C',-1],['S',-1]], verdict:'pool bounced cleanly'},
+   {id:'c', icon:'🔪', name:'kill_dash_nine_all.sh', origin:'forum snippet · unranked', sim:74, color:'#a98cff',
+    path:[['N',-1],['T',-3],['F',-9]], rule:'touched PID 1 — execution rule violated', verdict:'terminated by race control'},
+   {id:'d', icon:'📈', name:'raise_cpu_limits.sh', origin:'stack-overflow #9917', sim:61, color:'#ff7ab8',
+    path:[['N',-1],['W',-2],['C',-1],['F',-9]], verdict:'limits raised — zombies remain'},
+  ]},
+ cert:{
+  title:'INC-4023 · TLS cert expires in 4 h', sev:'crit',
+  desc:'edge-lb certificate for api.example.com near expiry.',
+  kws:['tls','cert','renew','expiry'],
+  opt:{script:'renew_and_reload.sh',
+    lines:[
+      {t:'#!/bin/bash'},
+      {t:'certbot renew --force-renewal', bad:'certbot renew --force-renewal', good:'certbot renew --cert-name api.example.com'},
+      {t:'service nginx restart', bad:'service nginx restart', good:'nginx -s reload'},
+      {t:'openssl s_client -connect api:443 | openssl x509 -enddate'},
+    ],
+    note:`Command mapping DB 440: <b>--force-renewal on everything</b> <span class="arrow">→</span> <b>scoped --cert-name</b> (rate-limit safe) · <b>hard restart</b> <span class="arrow">→</span> <b>hot reload</b> (zero dropped connections).`},
+  cands:[
+   {id:'a', icon:'🔐', name:'renew_and_reload.sh', origin:'knowledge base · ops-repo', sim:95, color:'#2fe08c',
+    path:[['N',-1],['W',-2],['N',-1],['C',-1],['S',-1]], verdict:'renewed, hot-reloaded, verified'},
+   {id:'b', icon:'📜', name:'swap_from_backup_ca.sh', origin:'runbook v1', sim:83, color:'#4da3ff',
+    path:[['N',-1],['C',-1],['S',-1]], verdict:'backup cert deployed'},
+   {id:'c', icon:'⏳', name:'wait_for_dns_acme.sh', origin:'stack-overflow #55102', sim:78, color:'#a98cff',
+    path:[['N',-1],['W',-2],['W',-3],['W',-4],['T',-3],['F',-9]], rule:'total wait > 30 s — execution rule violated', verdict:'dynamic wait penalties escalated, then cut'},
+   {id:'d', icon:'🙈', name:'disable_tls_check.sh', origin:'forum snippet · unranked', sim:52, color:'#ff7ab8',
+    path:[['N',-1],['C',-1],['F',-9]], verdict:'“fixed” by hiding the problem — criteria unmet'},
+  ]},
+};
 
-// ═══════════════════════════════════════
-// STATE MACHINE
-// ═══════════════════════════════════════
-const SM=[
-  {id:'READY',   x:.07,y:.48,r:26,c:'#5e6882',label:'READY'},
-  {id:'RUNNING', x:.27,y:.18,r:30,c:'#3d8bfd',label:'RUNNING'},
-  {id:'WAITING', x:.27,y:.78,r:26,c:'#ffb020',label:'WAITING'},
-  {id:'COMPLETED',x:.52,y:.18,r:28,c:'#8694ab',label:'COMPLETED'},
-  {id:'TERMINATED',x:.52,y:.78,r:24,c:'#ff4757',label:'TERMINATED'},
-  {id:'SUCCEEDED',x:.78,y:.12,r:28,c:'#00e68a',label:'SUCCEEDED'},
-  {id:'FAILED',  x:.78,y:.85,r:28,c:'#ff4757',label:'FAILED'},
-];
-const EDGES=[
-  {f:'READY',t:'RUNNING',rw:-1},{f:'RUNNING',t:'COMPLETED',rw:-1},
-  {f:'RUNNING',t:'WAITING',rw:-2},{f:'WAITING',t:'RUNNING',rw:-1},
-  {f:'WAITING',t:'COMPLETED',rw:-1},{f:'WAITING',t:'TERMINATED',rw:-3},
-  {f:'COMPLETED',t:'SUCCEEDED',rw:-1},{f:'COMPLETED',t:'FAILED',rw:-9},
-  {f:'TERMINATED',t:'FAILED',rw:-9},
-];
+// ═══════════ STATE ═══════════
+let sel='disk', running=false;
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-// RUNNER COLORS
-const RCOLORS=['#3d8bfd','#00e68a','#ffb020','#ff4757','#b07aff','#00d4ff','#ff6b9d','#ffd93d'];
+const t0=Date.now();
+function log(tag,msg,cls='info'){
+  const s=Math.floor((Date.now()-t0)/1000),mm=String(Math.floor(s/60)).padStart(2,'0'),ss=String(s%60).padStart(2,'0');
+  $('log').insertAdjacentHTML('beforeend',`<div><span class="lt">[${mm}:${ss}]</span> <span class="${cls}">${tag}</span> ${msg}</div>`);
+  $('log').scrollTop=$('log').scrollHeight;
+}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
 
-// VECTORS
-const VECS=[
-  {id:'lat',ic:'🕐',nm:'Latency spike',ds:'Wait bias +40%',fn:()=>eachR(r=>r.wb+=.4)},
-  {id:'oom',ic:'💥',nm:'OOM kill',ds:'Term chance +50%',fn:()=>eachR(r=>r.tb+=.5)},
-  {id:'ddos',ic:'🌊',nm:'DDoS wave',ds:'Spike all connections',fn:()=>NODES.forEach(n=>n.conn=Math.min(2500,n.conn+300+R()*400))},
-  {id:'dio',ic:'💾',nm:'Disk I/O storm',ds:'Disk +15% all nodes',fn:()=>NODES.forEach(n=>n.disk=Math.min(99,n.disk+10+R()*10))},
-  {id:'cpu',ic:'🔥',nm:'CPU burn',ds:'CPU +25% random nodes',fn:()=>pick(NODES,3).forEach(n=>n.cpu=Math.min(99,n.cpu+20+R()*15))},
-  {id:'mem',ic:'🧠',nm:'Memory leak',ds:'Mem +20% API nodes',fn:()=>NODES.filter(n=>n.type==='node.js').forEach(n=>n.mem=Math.min(99,n.mem+15+R()*10))},
-  {id:'net',ic:'🔌',nm:'Net partition',ds:'Drop DB connections',fn:()=>NODES.filter(n=>n.type==='postgres').forEach(n=>n.conn=Math.floor(R()*3))},
-  {id:'rec',ic:'🩹',nm:'Recovery',ds:'Reduce wait/fail -30%',fn:()=>eachR(r=>{r.wb=Math.max(.05,r.wb-.3);r.fb=Math.max(.05,r.fb-.25)})},
-  {id:'cool',ic:'❄️',nm:'Cooldown',ds:'Drop CPU/MEM 20%',fn:()=>NODES.forEach(n=>{n.cpu=Math.max(8,n.cpu-15-R()*10);n.mem=Math.max(15,n.mem-10-R()*10)})},
-  {id:'chaos',ic:'🎲',nm:'Chaos monkey',ds:'Random spike somewhere',fn:()=>{const n=pick(NODES,1)[0],m=pick(['cpu','mem','disk'],1)[0];n[m]=Math.min(99,n[m]+25+R()*20)}},
-];
+// ═══════════ RENDER ═══════════
+function renderProbs(){
+  $('probs').innerHTML=Object.entries(PROBLEMS).map(([k,p])=>`
+   <div class="prob ${sel===k?'sel':''}" onclick="pickProb('${k}')">
+     <span class="sev ${p.sev}">${p.sev.toUpperCase()}</span>
+     <div class="pt">${p.title}</div>
+     <div class="pd">${p.desc}</div>
+     <div class="pk">${p.kws.map(k2=>`<span class="kw">${k2}</span>`).join('')}</div>
+   </div>`).join('');
+}
+function pickProb(k){ if(running) return; sel=k; renderProbs(); $('runHint').textContent=PROBLEMS[k].title+' selected — ready to race.'; }
 
-// ═══════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════
-let incidents=[], resolved=[], incCtr=0, ticks=0, t0=Date.now();
-let gs={i:0,r:0,f:0};
-let canvas,ctx,cw,ch;
-let particles=[];  // animated dots on state machine
-let edgeFlashes=[]; // flash an edge when traversed
-let cooldowns={};
-
-// ═══════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════
-function init(){
-  renderInfra(); renderVecs();
-  resizeCanvas();
-  window.addEventListener('resize',resizeCanvas);
-  window.addEventListener('orientationchange',resizeCanvas);
-  if(window.ResizeObserver) new ResizeObserver(resizeCanvas).observe(document.getElementById('smWrap'));
-  setInterval(tick,700);
-  setInterval(renderInfra,900);
-  setInterval(updateTop,1000);
-  requestAnimationFrame(drawLoop);
-  log('Infrastructure online. Monitoring thresholds.','s');
-  log('disk>90% · cpu>92% · mem>93% · conn<5(pg) · conn>1800(redis)','c');
+function laneHTML(c){
+  return `<div class="lane" id="lane-${c.id}" style="border-left:3px solid ${c.color}">
+    <div class="lane-top">
+      <span class="li">${c.icon}</span><b>${c.name}</b>
+      <span class="st" id="st-${c.id}">READY</span>
+      <span class="score" id="sc-${c.id}" style="color:${c.color}">0</span>
+    </div>
+    <div class="track" id="tr-${c.id}">
+      ${[['RUNNING',26],['WAITING·pit',44],['COMPLETED',66],['RESULT',94]].map(([l,x])=>`<span class="seg" style="left:${x}%"></span><span class="seglbl" style="left:${x}%">${l}</span>`).join('')}
+      <div class="runner" id="rn-${c.id}" style="left:${POS.R}%;background:${c.color};color:${c.color}">${c.icon}</div>
+    </div>
+    <div class="path" id="ph-${c.id}"></div>
+  </div>`;
 }
 
-// ═══════════════════════════════════════
-// TICK
-// ═══════════════════════════════════════
-function tick(){
-  ticks++;
-  driftMetrics();
-  checkThresh();
-  advanceAll();
-}
-
-function driftMetrics(){
-  NODES.forEach(n=>{
-    const tg=TARGETS[n.type]||{cpu:30,mem:40,disk:30,conn:100};
-    ['cpu','mem','disk'].forEach(m=>{n[m]=cl(n[m]+(tg[m]-n[m])*.02+(R()-.5)*4,1,99)});
-    n.conn=Math.max(0,Math.round(n.conn+(tg.conn-n.conn)*.03+(R()-.5)*30));
-    n.disk=cl(n.disk+.08+R()*.05,1,99);
-    const w=Math.max(n.cpu,n.mem,n.disk);
-    n.status=w>90?'crit':w>75?'warn':'ok';
-    if(n.type==='postgres'&&n.conn<10)n.status='crit';
-    if(n.type==='redis'&&n.conn>1600)n.status='warn';
-  });
-}
-
-function checkThresh(){
-  NODES.forEach(node=>{
-    if(incidents.some(i=>i.nid===node.id))return;
-    for(const t of ITPL){if(t.trigger(node)){spawnInc(node,t);break}}
-  });
-}
-
-// ═══════════════════════════════════════
-// INCIDENTS
-// ═══════════════════════════════════════
-function spawnInc(node,tpl){
-  incCtr++;gs.i++;
-  const id=`INC-${String(incCtr).padStart(3,'0')}`;
-  log(`🚨 ${id}: ${tpl.title(node)}`,'r');
-  toast(`🚨 ${id} ${tpl.title(node)}`,'e');
-
-  // optimize commands
-  const scripts=tpl.scripts.map(s=>{
-    let cmds=[...s.cmds],opt=false,oc=null;
-    for(let i=0;i<cmds.length;i++){if(CMAP[cmds[i]]){cmds[i]=CMAP[cmds[i]];opt=true}}
-    if(opt)oc=cmds;
-    return {...s,optimized:opt,optCmds:oc};
-  });
-  scripts.forEach((s,i)=>{
-    const tag=s.type==='sample'?'sample':'found';
-    log(`  [${tag}] ${s.name}${s.sim?' sim='+Math.round(s.sim*100)+'%':''}${s.optimized?' (optimized)':''}`,'i');
-  });
-
-  // create runners
-  const runners=scripts.map((s,i)=>({
-    idx:i,script:s,st:'READY',sc:0,path:['READY'],rws:[],done:false,wc:0,
-    wb:.15+R()*.1, tb:.06+R()*.04, fb:.12+R()*.08, mw:4,
-    spd:2+Math.floor(R()*3), ta:0,
-    color:RCOLORS[i%RCOLORS.length],
-    // animated position on state machine
-    ax:SM[0].x, ay:SM[0].y, tx:SM[0].x, ty:SM[0].y,
-  }));
-
-  const inc={id,nid:node.id,node,tpl,title:tpl.title(node),sev:tpl.sev,runners,result:null,winner:null,t0:Date.now()};
-  incidents.push(inc);
-  updateExplain(inc);
-  renderBottom();
-}
-
-function advanceAll(){
-  incidents.forEach(inc=>{
-    if(inc.result)return;
-    let allDone=true;
-    inc.runners.forEach(r=>{
-      if(r.done)return;
-      allDone=false;
-      r.ta++;
-      if(r.ta>=r.spd){r.ta=0;stepR(r,inc)}
-    });
-    if(allDone&&!inc.result)finalize(inc);
-    renderBottom();
-  });
-}
-
-function stepR(r,inc){
-  const edges=EDGES.filter(e=>e.f===r.st);
-  if(!edges.length){r.done=true;return}
-  let ch;
-  if(r.st==='READY')ch=edges.find(e=>e.t==='RUNNING');
-  else if(r.st==='RUNNING')ch=R()<r.wb?edges.find(e=>e.t==='WAITING'):edges.find(e=>e.t==='COMPLETED');
-  else if(r.st==='WAITING'){
-    r.wc++;const rn=R();
-    if(rn<r.tb||r.wc>r.mw)ch=edges.find(e=>e.t==='TERMINATED');
-    else if(rn<r.tb+.35)ch=edges.find(e=>e.t==='RUNNING');
-    else ch=edges.find(e=>e.t==='COMPLETED');
-  }else if(r.st==='COMPLETED')ch=R()<r.fb?edges.find(e=>e.t==='FAILED'):edges.find(e=>e.t==='SUCCEEDED');
-  else if(r.st==='TERMINATED')ch=edges.find(e=>e.t==='FAILED');
-  if(!ch){r.done=true;return}
-
-  r.sc+=ch.rw; r.st=ch.t; r.path.push(ch.t); r.rws.push(ch.rw);
-
-  // animate: set target position
-  const tn=SM.find(s=>s.id===ch.t);
-  if(tn){r.tx=tn.x;r.ty=tn.y}
-
-  // flash edge
-  edgeFlashes.push({f:ch.f,t:ch.t,alpha:1,color:r.color});
-
-  // spawn particles along edge
-  const fn=SM.find(s=>s.id===ch.f),ton=SM.find(s=>s.id===ch.t);
-  if(fn&&ton){
-    for(let i=0;i<4;i++){
-      const p=.2+R()*.6;
-      particles.push({
-        x:fn.x+(ton.x-fn.x)*p+(.5-R())*.03,
-        y:fn.y+(ton.y-fn.y)*p+(.5-R())*.03,
-        vx:(R()-.5)*.003,vy:(R()-.5)*.003,
-        sz:2+R()*2,alpha:.9,color:r.color
-      });
-    }
+// ═══════════ MAIN FLOW ═══════════
+async function runAll(){
+  if(running) return; running=true; $('runBtn').disabled=true;
+  const P=PROBLEMS[sel];
+  // reset UI
+  $('cands').innerHTML=''; $('boardBox').style.display='none'; $('podium').innerHTML='';
+  $('deployline').style.display='none'; $('mapnote').style.display='none';
+  $('lanes').innerHTML='';
+  // ---- SCOUT ----
+  $('radar').classList.remove('idle');
+  log('SCOUT',`problem statement received: “${P.title}” — keywords [${P.kws.join(', ')}]`,'info');
+  log('SCOUT','NLP 442: bag-of-words + TF-IDF over knowledge base 444 and indexed forums','pur');
+  await sleep(900);
+  for(const c of P.cands){
+    $('cands').insertAdjacentHTML('beforeend',`
+      <div class="cand" id="cd-${c.id}">
+        <span class="ci">${c.icon}</span>
+        <span class="cn"><b>${c.name}</b><small>${c.origin}</small></span>
+        <span class="simbar"><span class="simfill" id="sf-${c.id}" style="background:${c.color}"></span></span>
+        <span class="sim" style="color:${c.color}">${c.sim}%</span>
+      </div>`);
+    await sleep(120); $('cd-'+c.id).classList.add('show');
+    await sleep(60); $('sf-'+c.id).style.width=c.sim+'%';
+    log('SCOUT',`candidate: ${c.name} — similarity ${c.sim}% (${c.origin})`,'info');
+    await sleep(140);
   }
-
-  if(['SUCCEEDED','FAILED'].includes(r.st)){
-    r.done=true;
-    const ok=r.st==='SUCCEEDED';
-    log(`${inc.id} ${r.script.name} → ${r.st} [${r.sc}]`,ok?'s':'r');
-  }
-}
-
-function finalize(inc){
-  const w=inc.runners.filter(r=>r.st==='SUCCEEDED').sort((a,b)=>b.sc-a.sc);
-  if(w.length){
-    inc.winner=w[0];inc.result='ok';gs.r++;
-    inc.tpl.fix(inc.node);
-    log(`✓ ${inc.id} RESOLVED: ${inc.winner.script.name} (${inc.winner.sc})`,'s');
-    toast(`✓ ${inc.id} → ${inc.winner.script.name}`,'s');
-  }else{
-    inc.result='fail';gs.f++;
-    log(`✗ ${inc.id} FAILED: all candidates failed`,'r');
-    toast(`✗ ${inc.id} unresolved`,'e');
-  }
-  setTimeout(()=>{
-    incidents=incidents.filter(i=>i.id!==inc.id);
-    resolved.unshift(inc);if(resolved.length>15)resolved.pop();
-    renderBottom();addBbi(inc);
-    if(!incidents.length)updateExplain(null);
-  },2500);
-}
-
-// ═══════════════════════════════════════
-// CANVAS DRAW LOOP
-// ═══════════════════════════════════════
-function resizeCanvas(){
-  canvas=document.getElementById('smCanvas');
-  const r=canvas.parentElement.getBoundingClientRect();
-  // ignore zero-size measurements (mobile layout settling / rotation)
-  if(r.width<1||r.height<1) return;
-  const dpr=devicePixelRatio||1;
-  canvas.width=r.width*dpr;canvas.height=r.height*dpr;
-  canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';
-  ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
-  cw=r.width;ch=r.height;
-}
-
-function drawLoop(){
-  if(!ctx){requestAnimationFrame(drawLoop);return}
-  ctx.clearRect(0,0,cw,ch);
-
-  // collect active states from all runners
-  const activeStates=new Set();
-  const runnersByState={};
-  incidents.forEach(inc=>inc.runners.forEach(r=>{
-    activeStates.add(r.st);
-    if(!runnersByState[r.st])runnersByState[r.st]=[];
-    runnersByState[r.st].push(r);
-    // lerp position
-    r.ax+=(r.tx-r.ax)*.12;
-    r.ay+=(r.ty-r.ay)*.12;
-  }));
-
-  // decay edge flashes
-  edgeFlashes=edgeFlashes.filter(ef=>{ef.alpha-=.03;return ef.alpha>0});
-
-  // draw edges
-  EDGES.forEach(e=>{
-    const fn=SM.find(s=>s.id===e.f),tn=SM.find(s=>s.id===e.t);
-    const x1=fn.x*cw,y1=fn.y*ch,x2=tn.x*cw,y2=tn.y*ch;
-    const mx=(x1+x2)/2,my=(y1+y2)/2,dx=x2-x1,dy=y2-y1;
-    const off=(e.f==='WAITING'&&e.t==='RUNNING')?-.22:.16;
-    const cpx=mx-dy*off,cpy=my+dx*off;
-
-    // check if flashing
-    const flash=edgeFlashes.find(ef=>ef.f===e.f&&ef.t===e.t);
-    const isActive=activeStates.has(e.f)&&activeStates.has(e.t);
-
-    ctx.beginPath();
-    ctx.strokeStyle=flash?flash.color+''+Math.round(flash.alpha*255).toString(16).padStart(2,'0'):isActive?'rgba(30,38,54,.9)':'rgba(26,34,51,.5)';
-    ctx.lineWidth=flash?(1.5+flash.alpha*2):1;
-    ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cpx,cpy,x2,y2);ctx.stroke();
-
-    // arrowhead
-    const at=.82;
-    const ax2=(1-at)**2*x1+2*(1-at)*at*cpx+at**2*x2;
-    const ay2=(1-at)**2*y1+2*(1-at)*at*cpy+at**2*y2;
-    const at2=.80;
-    const bx2=(1-at2)**2*x1+2*(1-at2)*at2*cpx+at2**2*x2;
-    const by2=(1-at2)**2*y1+2*(1-at2)*at2*cpy+at2**2*y2;
-    const ang=Math.atan2(ay2-by2,ax2-bx2);
-    ctx.beginPath();ctx.moveTo(ax2,ay2);
-    ctx.lineTo(ax2-6*Math.cos(ang-Math.PI/6),ay2-6*Math.sin(ang-Math.PI/6));
-    ctx.lineTo(ax2-6*Math.cos(ang+Math.PI/6),ay2-6*Math.sin(ang+Math.PI/6));
-    ctx.closePath();ctx.fillStyle=ctx.strokeStyle;ctx.fill();
-
-    // reward label
-    ctx.font='600 9px IBM Plex Mono';
-    const rwCol=e.rw<=-9?'rgba(255,71,87,.8)':e.rw<=-2?'rgba(255,176,32,.7)':'rgba(134,148,171,.4)';
-    ctx.fillStyle=flash?flash.color:rwCol;
-    const lx=mx+(.5-off)*(cpy-my)*.4-8, ly=my-(.5-off)*(cpx-mx)*.4+3;
-    ctx.fillText(e.rw+'',cpx*.35+mx*.65-6,cpy*.35+my*.65+3);
+  $('radar').classList.add('idle');
+  // ---- PIT CREW ----
+  await sleep(400);
+  $('optName').textContent=P.opt.script;
+  const ob=$('optBody'); ob.innerHTML='';
+  P.opt.lines.forEach((l,i)=>{
+    let html=l.t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    if(l.bad) html=html.replace(l.bad.replace(/&/g,'&amp;').replace(/</g,'&lt;'),`<span class="bad-cmd" id="bc-${i}">${l.bad}</span>`);
+    ob.insertAdjacentHTML('beforeend',`<div class="ol"><span class="ln">${String(i+1).padStart(2,'0')}</span>${html}</div>`);
   });
-
-  // draw particles
-  particles=particles.filter(p=>{
-    p.x+=p.vx;p.y+=p.vy;p.alpha-=.02;p.sz*=.97;
-    if(p.alpha<=0)return false;
-    ctx.beginPath();ctx.arc(p.x*cw,p.y*ch,p.sz,0,Math.PI*2);
-    ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();ctx.globalAlpha=1;
-    return true;
+  log('PIT',`inspecting ${P.opt.script} — extracting commands (302), consulting mapping DB 440`,'pur');
+  await sleep(1100);
+  P.opt.lines.forEach((l,i)=>{
+    if(l.bad){ const el=$('bc-'+i); if(el){ el.className='good-cmd'; el.textContent=l.good; } }
   });
-
-  // draw nodes
-  SM.forEach(n=>{
-    const px=n.x*cw,py=n.y*ch;
-    const isAct=activeStates.has(n.id);
-    const count=(runnersByState[n.id]||[]).length;
-
-    // glow
-    if(isAct&&count>0){
-      ctx.beginPath();ctx.arc(px,py,n.r+10,0,Math.PI*2);
-      ctx.fillStyle=n.c+'15';ctx.fill();
-    }
-
-    ctx.beginPath();ctx.arc(px,py,n.r,0,Math.PI*2);
-    ctx.fillStyle=isAct?n.c+'18':'rgba(10,14,21,.95)';
-    ctx.fill();
-    ctx.strokeStyle=isAct?n.c:'#1a2233';
-    ctx.lineWidth=isAct?2:1.2;
-    ctx.stroke();
-
-    // label
-    ctx.font=`${isAct?'700':'500'} ${n.r>26?'9':'8'}px IBM Plex Mono`;
-    ctx.fillStyle=isAct?n.c:'#4d5a72';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(n.label,px,py);
-
-    // count badge
-    if(count>0){
-      ctx.font='700 8px IBM Plex Mono';
-      ctx.fillStyle=n.c;
-      ctx.fillText(count+'',px,py+n.r+10);
-    }
-  });
-
-  // draw runner dots on their animated positions
-  incidents.forEach(inc=>inc.runners.forEach(r=>{
-    if(r.done&&(r.st==='SUCCEEDED'||r.st==='FAILED'))return; // hide finished
-    const px=r.ax*cw,py=r.ay*ch;
-    // offset multiple runners at same state
-    const peers=(runnersByState[r.st]||[]);
-    const pi=peers.indexOf(r);
-    const offx=(pi-(peers.length-1)/2)*8;
-
-    ctx.beginPath();ctx.arc(px+offx,py-SM.find(s=>s.id===r.st).r-12,4,0,Math.PI*2);
-    ctx.fillStyle=r.color;ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=1;ctx.stroke();
-  }));
-
-  requestAnimationFrame(drawLoop);
-}
-
-// ═══════════════════════════════════════
-// EXPLANATION OVERLAY
-// ═══════════════════════════════════════
-function updateExplain(inc){
-  const el=document.getElementById('smExplain');
-  if(!inc){
-    el.innerHTML='State machine idle. Each script candidate becomes a <span class="hl">runner</span> that traverses states. Transitions carry <span class="hl">reward penalties</span>. Best (least negative) score wins.';
-    return;
-  }
-  el.innerHTML=`<span class="hl">${inc.id}</span> — ${inc.runners.length} runners evaluating concurrently.<br>
-  Each dot is a script. They traverse <span class="hl">READY→RUNNING→COMPLETED→SUCCEEDED</span> ideally (score -3).<br>
-  Detours through <span class="hl">WAITING</span> (-2) or <span class="hl">TERMINATED</span> (-3) cost more. <span class="hl">FAILED</span> = -9 penalty.`;
-}
-
-// ═══════════════════════════════════════
-// BOTTOM PANEL (runners detail)
-// ═══════════════════════════════════════
-function renderBottom(){
-  const el=document.getElementById('runnersArea');
-  document.getElementById('rnCt').textContent=(incidents.reduce((a,i)=>a+i.runners.length,0))+' runners';
-
-  if(!incidents.length&&!resolved.length){
-    el.innerHTML='<div style="padding:.6rem;text-align:center;color:var(--t3)">No active incident</div>';
-    return;
-  }
-  let html='';
-  incidents.forEach(inc=>{
-    html+=`<div class="inc-bar">
-      <span class="inc-sev ${inc.sev}">${inc.sev}</span>
-      <span class="inc-title">${inc.id} · ${inc.title}</span>
-      <span class="inc-phase">${inc.result==='ok'?'RESOLVED':inc.result==='fail'?'FAILED':'SIMULATING'}</span>
-      <span class="inc-time">${timeSince(inc.t0)}</span>
-    </div>`;
-    html+='<div class="rn-grid">';
-    inc.runners.forEach((r,i)=>{
-      const col=r.st==='SUCCEEDED'?'var(--g)':r.st==='FAILED'?'var(--r)':r.done?'var(--t3)':r.color;
-      const wcls=inc.winner&&inc.winner.idx===i?' winner':(inc.result&&r.st!=='SUCCEEDED'?' loser':'');
-      const pct=Math.max(5,Math.min(100,((r.sc+25)/23)*100));
-
-      // path with highlights
-      let pathHtml='<div class="rn-path">';
-      r.path.forEach((s,pi)=>{
-        const cls=s==='SUCCEEDED'?'pass':s==='FAILED'?'fail':(pi===r.path.length-1&&!r.done?'cur':'');
-        pathHtml+=`<span class="rn-ps ${cls}">${s.slice(0,3)}</span>`;
-        if(pi<r.path.length-1)pathHtml+='<span class="rn-arr">→</span>';
-      });
-      pathHtml+='</div>';
-
-      // rewards breakdown
-      let rwHtml='<div class="rn-rewards">';
-      r.rws.forEach(rw=>{
-        const c=rw<=-9?'var(--r)':rw<=-2?'var(--a)':'var(--t2)';
-        rwHtml+=`<span class="rn-rw" style="color:${c}">${rw}</span>`;
-      });
-      rwHtml+='</div>';
-
-      html+=`<div class="rn${wcls}">
-        <div class="rn-top">
-          <div class="rn-dot" style="background:${r.color}"></div>
-          <div class="rn-name">${r.script.name}</div>
-          <div class="rn-state" style="color:${col}">${r.st}</div>
-          <div class="rn-score" style="color:${col}">${r.sc}</div>
-        </div>
-        ${pathHtml}${rwHtml}
-        <div class="rn-bar"><div class="rn-bf" style="width:${pct}%;background:${col}"></div></div>
-      </div>`;
-    });
-    html+='</div>';
-  });
-  // show last few resolved
-  resolved.slice(0,3).forEach(inc=>{
-    const ok=inc.result==='ok';
-    html+=`<div class="inc-bar" style="opacity:.5">
-      <span class="inc-sev" style="background:${ok?'rgba(0,230,138,.1)':'rgba(255,71,87,.1)'};color:${ok?'var(--g)':'var(--r)'}">${ok?'OK':'FAIL'}</span>
-      <span class="inc-title">${inc.id} · ${inc.title}</span>
-      <span class="inc-phase" style="color:${ok?'var(--g)':'var(--r)'}">${ok?inc.winner.script.name+' ('+inc.winner.sc+')':'ALL FAILED'}</span>
-      <span class="inc-time">${timeSince(inc.t0)}</span>
-    </div>`;
-  });
-  el.innerHTML=html;
-}
-
-// ═══════════════════════════════════════
-// INFRA RENDER
-// ═══════════════════════════════════════
-function renderInfra(){
-  const el=document.getElementById('infraList');
-  el.innerHTML=NODES.map(n=>{
-    const mc=(v,hi=90)=>v>hi?'var(--r)':v>75?'var(--a)':'var(--g)';
-    const cc=n.type==='postgres'?(n.conn<10?'var(--r)':'var(--g)'):(n.type==='redis'?(n.conn>1600?'var(--a)':'var(--g)'):'var(--g)');
-    return`<div class="nd"><div class="nd-top"><div class="nd-dot ${n.status}"></div><div class="nd-name">${n.name}</div><div class="nd-type">${n.type}</div></div>
-    <div class="nd-bars">
-      <div class="mb"><div class="mb-l">CPU</div><div class="mb-v" style="color:${mc(n.cpu,92)}">${Math.round(n.cpu)}%</div><div class="mb-bar"><div class="mb-f" style="width:${n.cpu}%;background:${mc(n.cpu,92)}"></div></div></div>
-      <div class="mb"><div class="mb-l">MEM</div><div class="mb-v" style="color:${mc(n.mem,93)}">${Math.round(n.mem)}%</div><div class="mb-bar"><div class="mb-f" style="width:${n.mem}%;background:${mc(n.mem,93)}"></div></div></div>
-      <div class="mb"><div class="mb-l">DSK</div><div class="mb-v" style="color:${mc(n.disk)}">${Math.round(n.disk)}%</div><div class="mb-bar"><div class="mb-f" style="width:${n.disk}%;background:${mc(n.disk)}"></div></div></div>
-      <div class="mb"><div class="mb-l">CONN</div><div class="mb-v" style="color:${cc}">${n.conn}</div><div class="mb-bar"><div class="mb-f" style="width:${Math.min(100,n.conn/20)}%;background:${cc}"></div></div></div>
-    </div></div>`;
+  $('mapnote').innerHTML=P.opt.note; $('mapnote').style.display='block';
+  log('PIT','preferable alternatives found — script modified, dependent code adjusted (316)','ok');
+  await sleep(900);
+  // ---- RACE ----
+  $('lanes').innerHTML=P.cands.map(laneHTML).join('');
+  log('RACE','production replica 506 spun up — checkpoints 504 armed — lights out 🏁','info');
+  await sleep(600);
+  const results=await Promise.all(P.cands.map((c,i)=>raceOne(c,i*260)));
+  // ---- PODIUM ----
+  results.sort((a,b)=>b.score-a.score); // closest to zero (least negative) first
+  const medals=['🏆','🥈','🥉','·'];
+  const order=[1,0,2]; // visual podium arrangement: 2nd,1st,3rd
+  $('podium').innerHTML=order.filter(i=>results[i]).map(i=>{
+    const r=results[i];
+    return `<div class="pod p${i+1}"><div class="cup">${medals[i]}</div>
+      <div class="pname">${r.c.name}</div><div class="pscore" style="color:${r.c.color}">${r.score}</div>
+      <div class="block"></div></div>`;
   }).join('');
+  const w=results[0];
+  document.querySelectorAll('.lane').forEach(e=>e.classList.add('out'));
+  $('lane-'+w.c.id).classList.remove('out'); $('lane-'+w.c.id).classList.add('winner');
+  $('boardBox').style.display='block';
+  $('deployline').style.display='block';
+  $('deployline').innerHTML=`🚀 <b>${w.c.name}</b> wins at <b>${w.score}</b> points — presented to the operator, approved, and deployed to <b>real</b> production. The reward table just taught the engine which script to trust next time.`;
+  log('DEPLOY',`winner ${w.c.name} (${w.score}) deployed to production — ranking presented (112)`,'ok');
+  if(results[3]) log('LEARN',`worst: ${results[3].c.name} (${results[3].score}) — “${results[3].c.verdict}”`,'warn');
+  running=false; $('runBtn').disabled=false;
+  $('runHint').textContent='Race finished. Pick another incident or race again.';
 }
 
-// ═══════════════════════════════════════
-// VECTORS
-// ═══════════════════════════════════════
-function renderVecs(){
-  document.getElementById('vecList').innerHTML=VECS.map(v=>
-    `<button class="vec" id="vb-${v.id}" onclick="fireV('${v.id}')"><div class="vi">${v.ic}</div><div style="flex:1;min-width:0"><div class="vn">${v.nm}</div><div class="vd">${v.ds}</div></div><div class="vf">FIRE</div></button>`
-  ).join('');
-}
-function fireV(id){
-  if(cooldowns[id])return;
-  const v=VECS.find(x=>x.id===id);if(!v)return;
-  v.fn();log(`VECTOR ▸ ${v.nm}: ${v.ds}`,'w');toast(`⚡ ${v.nm}`,'w');
-  cooldowns[id]=true;document.getElementById(`vb-${id}`).classList.add('cd');
-  setTimeout(()=>{cooldowns[id]=false;document.getElementById(`vb-${id}`).classList.remove('cd')},2500);
-}
-function eachR(fn){incidents.forEach(inc=>inc.runners.forEach(r=>{if(!r.done)fn(r)}))}
-
-// ═══════════════════════════════════════
-// LOG & TOAST
-// ═══════════════════════════════════════
-function log(msg,type='i'){
-  const el=document.getElementById('logArea');
-  const t=new Date(),ts=`${p2(t.getHours())}:${p2(t.getMinutes())}:${p2(t.getSeconds())}`;
-  const cls={i:'li',w:'lw',r:'lr',s:'ls',p:'lp',c:'lc'}[type]||'li';
-  const d=document.createElement('div');d.className='le';
-  d.innerHTML=`<span class="lt">${ts}</span><span class="${cls}">${msg}</span>`;
-  el.appendChild(d);if(el.children.length>300)el.removeChild(el.firstChild);
-  el.scrollTop=el.scrollHeight;
-}
-function toast(msg,type=''){
-  const d=document.createElement('div');d.className='toast'+(type?' t'+type:'');d.textContent=msg;
-  document.getElementById('toastZ').appendChild(d);setTimeout(()=>d.remove(),3000);
+async function raceOne(c, delay){
+  await sleep(delay);
+  let score=0, cur='R';
+  const st=$('st-'+c.id), sc=$('sc-'+c.id), rn=$('rn-'+c.id), ph=$('ph-'+c.id), tr=$('tr-'+c.id);
+  for(const [next,rw] of c.path){
+    await sleep(650+Math.random()*350);
+    score+=rw;
+    cur=next;
+    rn.style.left=POS[next]+'%';
+    rn.classList.toggle('pitstop', next==='W');
+    if(next==='T'||next==='F') rn.classList.add('crashed');
+    st.textContent=STATES[next];
+    st.className='st '+(next==='N'?'run':next==='W'?'wait':(next==='S'?'done':(next==='T'||next==='F')?'dead':''));
+    sc.textContent=score;
+    // floating penalty pop
+    const pop=document.createElement('span');
+    pop.className='pop'; pop.style.cssText=`left:${POS[next]}%;top:-6px;color:${rw<=-3?'var(--red)':'var(--amber)'}`;
+    pop.textContent=rw; tr.appendChild(pop); setTimeout(()=>pop.remove(),1150);
+    ph.insertAdjacentHTML('beforeend',`${ph.children.length?'<span class="hop"> → </span>':''}<span class="hop">${STATES[next]}<span class="pen">(${rw})</span></span>`);
+    if(next==='T'&&c.rule) log('RULE',`${c.name}: ${c.rule} → forced to TERMINATED (−3)`,'err');
+    else if(next==='F') log('RACE',`${c.name} FAILED (−9) — ${c.verdict}`,'err');
+    else if(next==='S') log('RACE',`${c.name} SUCCEEDED — ${c.verdict} · total ${score}`,'ok');
+  }
+  return {c, score};
 }
 
-// ═══════════════════════════════════════
-// TOP BAR
-// ═══════════════════════════════════════
-function updateTop(){
-  const h=NODES.filter(n=>n.status==='ok').length;
-  document.getElementById('tH').textContent=h;
-  document.getElementById('tH').className='v '+(h===NODES.length?'ok':h>4?'w':'c');
-  document.getElementById('tI').textContent=gs.i;
-  document.getElementById('tR').textContent=gs.r;
-  const fe=document.getElementById('tF');fe.textContent=gs.f;fe.className='v '+(gs.f>0?'c':'');
-  const tot=gs.r+gs.f;const re=document.getElementById('tRt');
-  if(tot>0){const rate=Math.round(gs.r/tot*100);re.textContent=rate+'%';re.className='v '+(rate>80?'ok':rate>50?'w':'c')}
-  const s=Math.floor((Date.now()-t0)/1000);
-  document.getElementById('upt').textContent=`${p2(Math.floor(s/3600))}:${p2(Math.floor(s%3600/60))}:${p2(s%60)}`;
-}
-
-function addBbi(inc){
-  const ok=inc.result==='ok';
-  const d=document.createElement('div');d.className='bi';
-  d.innerHTML=`<div class="bd" style="background:${ok?'var(--g)':'var(--r)'}"></div>${inc.id} ${ok?inc.winner.script.name:'FAILED'}`;
-  document.getElementById('bbar').appendChild(d);
-}
-
-// ═══════════════════════════════════════
-// UTIL
-// ═══════════════════════════════════════
-function R(){return Math.random()}
-function cl(v,lo,hi){return Math.max(lo,Math.min(hi,v))}
-function p2(n){return String(n).padStart(2,'0')}
-function pick(a,n){const b=[...a],r=[];for(let i=0;i<n&&b.length;i++){const j=Math.floor(R()*b.length);r.push(b.splice(j,1)[0])}return r}
-function timeSince(t){const s=Math.floor((Date.now()-t)/1000);return s<60?s+'s':Math.floor(s/60)+'m'}
-
-// ═══════════════════════════════════════
-init();
+// init
+renderProbs();
 </script>
 
-<!-- ===== RETRO NAV (added) ===== -->
+<!-- ===== RETRO NAV (site-wide) ===== -->
 <style>
 #retro-nav{
   position:fixed;left:12px;bottom:12px;z-index:2147483647;
@@ -760,44 +501,6 @@ init();
 }
 #retro-nav .rn-x:active{border-style:inset}
 @media(max-width:600px){#retro-nav{font-size:10px;left:6px;bottom:6px}}
-
-/* ===== MOBILE ===== */
-@media(max-width:820px){
-  html{font-size:13px}
-  body{height:auto;overflow:visible;overflow-x:hidden;display:block;-webkit-text-size-adjust:100%}
-
-  .top{height:auto;flex-wrap:wrap;gap:.5rem;padding:.5rem .7rem;position:sticky;top:0;z-index:80}
-  .top .sep{display:none}
-  .tstat{font-size:.68rem}
-  .top-r{margin-left:auto}
-
-  /* state machine first, infra + chaos rails below it */
-  .main{display:flex;flex-direction:column;overflow:visible}
-  .ccol{order:1}.rcol{order:2}.lcol{order:3}
-  .lcol,.rcol{border:none;border-bottom:1px solid var(--brd);display:block;overflow:visible}
-  .lcol>div[id="infraList"]{overflow:visible!important}
-  .chdr{position:sticky;top:0;z-index:20;background:var(--s1);font-size:.62rem;padding:.5rem .7rem}
-
-  .ccol{display:block}
-  .sm-wrap{flex:none;height:46vh;min-height:250px}
-  .bottom-panel{max-height:none;overflow:visible}
-  .sm-explain{max-width:70%;font-size:.55rem}
-  .sm-overlay{flex-wrap:wrap;gap:4px 8px}
-  .sm-legend{font-size:.55rem}
-
-  .rn-grid{grid-template-columns:1fr}
-  .rn{border-right:none}
-
-  /* touch targets */
-  .vec{padding:.6rem .6rem;font-size:.7rem}
-  #vecList{max-height:none!important;overflow:visible!important}
-  .logp{max-height:220px;font-size:.58rem}
-  .toast-z{top:auto;bottom:8px;right:8px;left:8px;align-items:flex-end}
-}
-@media(max-width:480px){
-  .sm-wrap{height:40vh;min-height:220px}
-  .sm-explain{max-width:100%;right:6px}
-}
 </style>
 <div id="retro-nav">
   <button class="rn-x" onclick="document.getElementById('retro-nav').style.display='none'" title="Close" aria-label="Close">x</button>

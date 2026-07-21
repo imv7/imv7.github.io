@@ -3,761 +3,498 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PourControl SCADA — Detection Mechanics · US 11,117,794 B2</title>
+<title>US 11,117,794 B2 — The Machine That Refuses to Spill</title>
+<meta name="description" content="Interactive demo of US 11,117,794 B2 — Liquid pouring control. Bring your own container: the dispenser 3D-scans it, judges it, watches the pour, and stops the instant anything goes wrong.">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*{margin:0;padding:0;box-sizing:border-box}
 :root{
---bg:#060a11;--bg1:#0c1222;--bg2:#121e34;--bg3:#192a4a;--bg4:#213560;
---c:#00d4ff;--c2:#0090cc;--cg:rgba(0,212,255,.07);
---g:#00e87b;--gg:rgba(0,232,123,.07);
---r:#ff2d55;--rg:rgba(255,45,85,.09);
---a:#ffc107;--ag:rgba(255,193,7,.07);
---p:#a78bfa;
---t:#cdd6e4;--t2:#6b7d99;--t3:#3e5070;
---bd:#162040;--bd2:#243d6a;
+--bg:#0a0d13;--s1:#11151e;--s2:#181e2b;--s3:#222a3c;
+--bd:#242e44;--bd2:#38466a;
+--t1:#e8edf6;--t2:#8b96b0;--t3:#566179;
+--cyan:#31d4e8;--green:#3ce08e;--red:#ff5a72;--amber:#ffbe45;--blue:#5aa2ff;--purple:#a88fff;
+--mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
 }
-html{font-size:13px}
-body{background:var(--bg);color:var(--t);font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg1)}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);line-height:1.5;-webkit-text-size-adjust:100%;overflow-x:hidden}
+.wrap{max-width:920px;margin:0 auto;padding:0 14px 90px}
 
-.top{height:44px;background:var(--bg1);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:14px;position:sticky;top:0;z-index:100}
-.top .logo{font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:7px}
-.top .dot{width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);animation:blink 2s infinite}
-.top .sep{width:1px;height:20px;background:var(--bd)}
-.top .tag{font-family:monospace;font-size:.65rem;color:var(--t3);letter-spacing:.03em}
-.top .rt{margin-left:auto;display:flex;align-items:center;gap:10px}
-.top .clk{font-family:monospace;font-size:.78rem;color:var(--c)}
-.b{padding:5px 14px;border:1px solid var(--bd2);background:none;color:var(--t);font-size:.72rem;border-radius:4px;cursor:pointer;font-weight:600;transition:all .15s}
-.b:hover{border-color:var(--c);color:var(--c)}.b.go{background:var(--c);color:var(--bg);border-color:var(--c)}.b:disabled{opacity:.35;cursor:default}
+/* ============ HEADER ============ */
+header{padding:34px 0 8px;text-align:center}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--cyan);text-transform:uppercase}
+h1{font-size:clamp(24px,5.4vw,40px);font-weight:700;letter-spacing:-.5px;margin:8px 0 6px;line-height:1.18}
+h1 .drop{color:var(--cyan)}
+.patent-tag{font-family:var(--mono);font-size:12px;color:var(--t2)}
+.patent-tag a{color:var(--blue);text-decoration:none}
+.patent-tag a:hover{text-decoration:underline}
+.lede{max-width:660px;margin:14px auto 0;color:var(--t2);font-size:15px}
+.lede b{color:var(--t1)}
 
-.layout{display:grid;grid-template-columns:1fr 380px;grid-template-rows:auto 1fr;min-height:calc(100vh - 44px)}
+/* ============ SECTION SHELL ============ */
+section{margin:24px 0;border:1px solid var(--bd);border-radius:14px;background:var(--s1);overflow:hidden}
+.sec-h{display:flex;align-items:baseline;gap:10px;padding:13px 16px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.sec-h .num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--cyan);background:rgba(49,212,232,.08);border:1px solid rgba(49,212,232,.3);border-radius:5px;padding:2px 8px}
+.sec-h h2{font-size:16px;font-weight:700}
+.sec-h .sub{font-size:11.5px;color:var(--t3);font-family:var(--mono);margin-left:auto}
+.sec-b{padding:16px}
+@media(max-width:480px){.sec-b{padding:12px}}
+.hint{font-size:12.5px;color:var(--t3)}
+.hint b{color:var(--t1)}
 
-/* SCENARIO BAR */
-.scbar{grid-column:1/-1;padding:12px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;background:var(--bg1);flex-wrap:wrap}
-.sc{padding:7px 14px;border:1px solid var(--bd);border-radius:5px;cursor:pointer;font-size:.75rem;font-weight:600;transition:all .2s;background:var(--bg)}
-.sc:hover{border-color:var(--c)}.sc.sel{border-color:var(--c);background:var(--cg);color:var(--c)}
+/* ============ CHOICES ============ */
+.choicegrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.choicegrid{grid-template-columns:1fr}}
+.chgroup h3{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1.5px solid var(--bd2);background:var(--s2);border-radius:11px;padding:9px 13px;cursor:pointer;transition:all .2s;text-align:center;flex:1;min-width:104px}
+.chip:hover{border-color:var(--cyan)}
+.chip.sel{border-color:var(--cyan);background:rgba(49,212,232,.07);box-shadow:0 0 14px rgba(49,212,232,.12)}
+.chip .ce{font-size:22px}
+.chip .cl{font-size:12px;font-weight:700;margin-top:2px}
+.chip .cs{font-family:var(--mono);font-size:9.5px;color:var(--t3)}
+.runbar{display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap}
+.btn{font-family:var(--mono);font-size:13px;font-weight:700;padding:11px 20px;border-radius:8px;border:1px solid var(--bd2);background:var(--s2);color:var(--t1);cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn.primary{background:var(--cyan);border-color:var(--cyan);color:#05222a}
+.btn.primary:hover{filter:brightness(1.12);color:#05222a}
+.btn.danger:hover{border-color:var(--red);color:var(--red)}
+.btn:disabled{opacity:.35;cursor:default;pointer-events:none}
+@media(max-width:480px){.btn{flex:1;text-align:center;padding:12px 10px}}
 
-/* MAIN */
-.main{overflow-y:auto;max-height:calc(100vh - 44px - 52px);padding:16px 20px}
-.side{overflow-y:auto;max-height:calc(100vh - 44px - 52px);border-left:1px solid var(--bd);padding:16px}
+/* ============ THE MACHINE ============ */
+.stagewrap{display:grid;grid-template-columns:1fr 250px;gap:14px}
+@media(max-width:760px){.stagewrap{grid-template-columns:1fr}}
+.stage{position:relative;background:linear-gradient(180deg,#0c101a,#121828 80%,#1a2135);border:1px solid var(--bd);border-radius:12px;min-height:380px;overflow:hidden}
+/* dispenser head */
+.head{position:absolute;left:50%;top:0;transform:translateX(-50%);width:64%;max-width:300px;height:56px;background:linear-gradient(180deg,#232c44,#1a2237);border-radius:0 0 16px 16px;border:1px solid var(--bd2);border-top:none;z-index:6}
+.head .brand{position:absolute;left:50%;top:10px;transform:translateX(-50%);font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--cyan)}
+.head .eye{position:absolute;left:20%;bottom:9px;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#7de8f7,#0a6577);box-shadow:0 0 8px rgba(49,212,232,.8)}
+.head .eye.e2{left:auto;right:20%}
+.nozzle{position:absolute;left:50%;top:54px;transform:translateX(-50%);width:16px;height:22px;background:#2a3552;border:1px solid var(--bd2);border-radius:0 0 6px 6px;z-index:6}
+/* stream */
+.stream{position:absolute;left:50%;transform:translateX(-50%);top:76px;width:6px;border-radius:3px;height:0;z-index:5;transition:height .2s}
+/* IR dots overlay */
+.irdots{position:absolute;left:0;right:0;top:0;bottom:0;z-index:7;pointer-events:none;opacity:0;transition:opacity .3s;background-image:radial-gradient(rgba(49,212,232,.9) 1.2px,transparent 1.6px);background-size:14px 14px;mix-blend-mode:screen;animation:irshift 1.2s steps(6) infinite}
+@keyframes irshift{50%{background-position:7px 7px}}
+.irdots.on{opacity:.5}
+/* scan line */
+.scanline{position:absolute;left:8%;right:8%;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);z-index:8;opacity:0;top:20%}
+.scanline.on{opacity:1;animation:sweepy 1.5s ease-in-out infinite alternate}
+@keyframes sweepy{from{top:22%}to{top:88%}}
+/* platform / scale */
+.plat{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);width:56%;max-width:270px;height:12px;background:linear-gradient(180deg,#2b3554,#1c2438);border-radius:6px;border:1px solid var(--bd2);z-index:3}
+.plat .platlbl{position:absolute;left:50%;top:14px;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;color:var(--t3);white-space:nowrap}
+/* container — CSS shapes via clip-path */
+.vessel{position:absolute;left:50%;bottom:38px;transform:translateX(-50%);z-index:4;transition:opacity .4s, transform .5s}
+.vessel .body{position:relative;border:2.5px solid;border-top-width:1.5px;overflow:hidden;background:rgba(255,255,255,.03)}
+.vessel .liq{position:absolute;left:0;right:0;bottom:0;height:0%;transition:height .25s linear;border-radius:0 0 4px 4px}
+.vessel .liq::after{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:rgba(255,255,255,.35);border-radius:2px}
+.vessel .target{position:absolute;left:-8px;right:-8px;height:0;border-top:2px dashed rgba(60,224,142,.7);opacity:0;transition:opacity .3s}
+.vessel .target .tl{position:absolute;right:-4px;top:-16px;font-family:var(--mono);font-size:8.5px;color:var(--green);white-space:nowrap}
+.vessel .crackmark{position:absolute;font-size:15px;opacity:0;transition:opacity .3s;text-shadow:0 0 8px var(--red)}
+.vessel.gone{opacity:0;transform:translateX(-50%) translateY(30px)}
+/* wireframe ghost */
+.wire{position:absolute;inset:-6px;border:1.5px dashed rgba(49,212,232,.65);border-radius:6px;opacity:0;transition:opacity .4s;pointer-events:none}
+.wire .wl{position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-family:var(--mono);font-size:8.5px;color:var(--cyan);white-space:nowrap}
+.vessel.modeled .wire{opacity:1}
+/* steam for hot liquids */
+.steam{position:absolute;left:50%;transform:translateX(-50%);bottom:100%;font-size:13px;opacity:0;animation:rise 2s ease-in infinite}
+.steam.s2{animation-delay:.7s;left:35%}
+.steam.s3{animation-delay:1.3s;left:65%}
+@keyframes rise{0%{opacity:0;transform:translate(-50%,0)}30%{opacity:.7}100%{opacity:0;transform:translate(-50%,-26px)}}
+/* verdict stamp on stage */
+.stamp{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%) rotate(-9deg) scale(2.6);z-index:30;font-family:var(--mono);font-weight:700;font-size:clamp(15px,3.4vw,22px);letter-spacing:2px;padding:8px 18px;border:3.5px solid;border-radius:9px;opacity:0;text-transform:uppercase;pointer-events:none;text-align:center}
+.stamp small{display:block;font-size:9px;letter-spacing:1px;opacity:.85}
+.stamp.on{animation:thunk .4s cubic-bezier(.2,1.6,.35,1) forwards}
+@keyframes thunk{to{transform:translate(-50%,-50%) rotate(-9deg) scale(1);opacity:1}}
+.stamp.ok{color:var(--green);border-color:var(--green);background:rgba(6,20,13,.75);box-shadow:0 0 40px rgba(60,224,142,.25)}
+.stamp.no{color:var(--red);border-color:var(--red);background:rgba(24,7,10,.78);box-shadow:0 0 40px rgba(255,90,114,.3)}
+/* alarm flash */
+.stage.alarm{animation:alarmf .35s steps(2) 4}
+@keyframes alarmf{50%{box-shadow:inset 0 0 0 3px var(--red)}}
 
-.stit{font-size:.62rem;text-transform:uppercase;letter-spacing:.13em;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.stit .sb{width:3px;height:10px;border-radius:1px}
-.stit .sb.c{background:var(--c)}.stit .sb.g{background:var(--g)}.stit .sb.r{background:var(--r)}.stit .sb.a{background:var(--a)}
+/* HUD */
+.hud{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:13px;font-family:var(--mono)}
+.hud h3{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
+.hrow{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:5px 0;border-bottom:1px dashed var(--bd)}
+.hrow:last-child{border-bottom:none}
+.hrow .hl{color:var(--t3)}
+.hrow .hv{color:var(--t1);font-weight:700;text-align:right}
+.hrow .hv.c{color:var(--cyan)}.hrow .hv.g{color:var(--green)}.hrow .hv.r{color:var(--red)}.hrow .hv.a{color:var(--amber)}
+.fillbar{height:7px;background:var(--s3);border-radius:4px;overflow:hidden;margin-top:4px}
+.fillfill{height:100%;width:0;border-radius:4px;transition:width .25s linear;background:linear-gradient(90deg,var(--cyan),var(--green))}
 
-/* BAY GRID */
-.bays{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:20px}
-.bay{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;overflow:hidden;transition:border-color .3s}
-.bay.act{border-color:var(--c)}.bay.alm{border-color:var(--r);box-shadow:0 0 20px rgba(255,45,85,.15)}.bay.ok{border-color:var(--g)}
-.bh{padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd);background:var(--bg2)}
-.bh .bid{font-weight:700;font-size:.8rem}
-.bh .bst{font-family:monospace;font-size:.62rem;padding:2px 7px;border-radius:3px}
-.bst.i{background:var(--bg3);color:var(--t3)}.bst.r{background:var(--cg);color:var(--c)}.bst.o{background:var(--gg);color:var(--g)}.bst.e{background:var(--rg);color:var(--r)}.bst.w{background:var(--ag);color:var(--a)}
-.bb{padding:12px;display:grid;grid-template-columns:90px 1fr;gap:10px}
+/* caption */
+.caption{margin-top:12px;min-height:40px;background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:9px 14px;font-size:13px;color:var(--t2);display:flex;align-items:center;gap:8px}
+.caption b{color:var(--t1)}
+.caption .cicon{flex-shrink:0}
 
-/* Vessel */
-.vessel{position:relative;width:90px;height:140px}
-.v-noz{position:absolute;top:0;left:33px;width:24px;height:24px;background:var(--bg3);border:2px solid var(--bd2);border-radius:3px 3px 6px 6px}
-.v-str{position:absolute;top:24px;left:40px;width:10px;height:0;border-radius:0 0 3px 3px;opacity:0;transition:all .2s}
-.v-str.on{opacity:1}
-.v-rim{position:absolute;top:24px;left:1px;width:88px;height:12px;border:2px solid rgba(0,212,255,.25);border-radius:4px 4px 0 0;background:rgba(0,212,255,.02)}
-.v-body{position:absolute;top:36px;left:9px;width:72px;height:104px;border:2px solid rgba(0,212,255,.2);border-top:none;border-radius:0 0 10px 10px;background:rgba(0,212,255,.015);overflow:hidden}
-.v-liq{position:absolute;bottom:0;width:100%;border-radius:0 0 8px 8px;transition:height .35s}
-.v-anom{position:absolute;width:14px;height:14px;border:2px solid var(--r);border-radius:50%;top:70px;left:50px;display:none}
-.v-anom.sh{display:block;animation:pulse-r 1s infinite}
-.v-scan{position:absolute;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--c),transparent);opacity:0;top:0}
-.v-scan.on{opacity:.7;animation:scandn 1.8s linear infinite}
+/* ============ PULSE LAB ============ */
+.pulsegrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.pulsegrid{grid-template-columns:1fr}}
+.pulsebox{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:13px}
+.pulsebox h3{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
+.decay{width:100%;height:120px}
+.decay polyline{fill:none;stroke-width:2}
+.decay .axis{stroke:#2a3450;stroke-width:1}
+.decay text{font-family:var(--mono);font-size:8px;fill:#566179}
+.framecount{font-family:var(--mono);font-size:10.5px;color:var(--t3);margin-top:6px}
+.framecount b{color:var(--cyan)}
+.pulse-note{font-size:12.5px;color:var(--t2);line-height:1.6}
+.pulse-note b{color:var(--t1)}
 
-.bdata{display:flex;flex-direction:column;gap:3px}
-.dr{display:flex;justify-content:space-between;font-size:.7rem}
-.dr .dl{color:var(--t3)}.dr .dv{font-family:monospace;font-weight:600}
-.dv.c{color:var(--c)}.dv.g{color:var(--g)}.dv.r{color:var(--r)}.dv.a{color:var(--a)}
-.bprog{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px}
-.bprog .bf{height:100%;border-radius:2px;width:0;transition:width .25s;background:var(--c)}
-.bf.gf{background:var(--g)}.bf.rf{background:var(--r)}
-.bfoot{padding:6px 12px;border-top:1px solid var(--bd);display:flex;gap:3px;flex-wrap:wrap}
-.stag{font-size:.58rem;font-family:monospace;padding:2px 5px;border-radius:2px;background:var(--bg3);color:var(--t3);display:flex;align-items:center;gap:3px}
-.stag .si{width:4px;height:4px;border-radius:50%}
-.stag.on .si{background:var(--g);box-shadow:0 0 4px var(--g)}.stag.off .si{background:var(--t3)}
+/* ============ LOG ============ */
+.logbox{background:#0b0e15;border:1px solid var(--bd);border-radius:9px;padding:9px 13px;font-family:var(--mono);font-size:11px;line-height:1.9;max-height:180px;overflow-y:auto;color:var(--t2)}
+.logbox .lt{color:var(--t3)}
+.logbox .ok{color:var(--green)}.logbox .warn{color:var(--amber)}.logbox .err{color:var(--red)}.logbox .info{color:var(--blue)}.logbox .cy{color:var(--cyan)}
 
-/* DETECTION DETAIL PANEL */
-.det-panel{margin-top:16px;background:var(--bg1);border:1px solid var(--bd);border-radius:8px;overflow:hidden;display:none}
-.det-panel.vis{display:block}
-.det-head{padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
-.det-head .dh-title{font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:8px}
-.det-head .dh-title .dh-dot{width:8px;height:8px;border-radius:50%;background:var(--r);box-shadow:0 0 8px var(--r);animation:blink .6s infinite}
-.det-body{padding:16px}
-
-/* Detection steps */
-.det-step{margin-bottom:14px;padding:12px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);opacity:.3;transition:all .4s}
-.det-step.active{opacity:1;border-color:var(--c);background:var(--cg)}
-.det-step.done{opacity:1;border-color:var(--g)}
-.det-step.fail{opacity:1;border-color:var(--r);background:var(--rg)}
-.ds-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.ds-num{font-family:monospace;font-size:.6rem;color:var(--t3);background:var(--bg3);padding:2px 6px;border-radius:3px}
-.ds-label{font-size:.78rem;font-weight:600}
-.ds-desc{font-size:.68rem;color:var(--t2);line-height:1.6;margin-bottom:8px}
-
-/* Waveform canvas */
-.waveform{width:100%;height:60px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;overflow:hidden;position:relative}
-.wf-canvas{width:100%;height:100%}
-.wf-label{position:absolute;top:4px;left:6px;font-family:monospace;font-size:.55rem;color:var(--t3)}
-.wf-val{position:absolute;top:4px;right:6px;font-family:monospace;font-size:.6rem;font-weight:700}
-
-/* Thermal sequence */
-.therm-seq{display:flex;gap:4px;overflow-x:auto;padding:4px 0}
-.therm-frame{width:48px;height:48px;border:1px solid var(--bd);border-radius:3px;flex-shrink:0;position:relative;overflow:hidden}
-.therm-frame canvas{width:100%;height:100%}
-.therm-frame .tf-label{position:absolute;bottom:1px;right:2px;font-family:monospace;font-size:.45rem;color:rgba(255,255,255,.6)}
-.therm-frame.defect{border-color:var(--r)}
-
-/* Math display */
-.math-box{font-family:monospace;font-size:.72rem;background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:8px 12px;line-height:1.8}
-.math-box .eq{color:var(--c)}.math-box .ok{color:var(--g)}.math-box .bad{color:var(--r)}.math-box .dim{color:var(--t3)}
-
-/* Threshold bar */
-.thresh{display:flex;align-items:center;gap:8px;margin-top:6px}
-.thresh-bar{flex:1;height:16px;background:var(--bg);border:1px solid var(--bd);border-radius:3px;position:relative;overflow:hidden}
-.thresh-fill{height:100%;border-radius:2px;transition:width .5s}
-.thresh-mark{position:absolute;top:0;height:100%;width:2px;background:var(--r)}
-.thresh-labels{display:flex;justify-content:space-between;font-family:monospace;font-size:.55rem;color:var(--t3);margin-top:2px}
-
-/* SIDEBAR */
-.log-l{font-family:monospace;font-size:.62rem;padding:3px 0;border-bottom:1px solid rgba(22,32,64,.6);line-height:1.5;display:flex;gap:5px}
-.log-l .lt{color:var(--t3);white-space:nowrap;min-width:48px}
-.log-l .lb{font-size:.52rem;padding:1px 4px;border-radius:2px;white-space:nowrap}
-.lb.I{background:var(--cg);color:var(--c)}.lb.O{background:var(--gg);color:var(--g)}.lb.W{background:var(--ag);color:var(--a)}.lb.E{background:var(--rg);color:var(--r)}
-.log-l .lm{flex:1;word-break:break-word}
-
-.vec{padding:7px 10px;background:var(--bg1);border:1px solid var(--bd);border-radius:5px;margin-bottom:4px;cursor:pointer;transition:all .2s}
-.vec:hover{border-color:var(--a);transform:translateX(2px)}
-.vec.forced{border-color:var(--r);background:var(--rg)}
-.vec .vn{font-size:.72rem;font-weight:600}.vec .vp{font-family:monospace;font-size:.6rem;color:var(--a);margin-top:1px}
-
-/* Modal */
-.mbg{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(6,10,17,.9);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
-.mbg.sh{opacity:1;pointer-events:auto}
-.mdl{background:var(--bg2);border:1px solid var(--bd2);border-radius:8px;padding:24px 28px;max-width:420px;width:92%;transform:scale(.93);transition:transform .3s}
-.mbg.sh .mdl{transform:scale(1)}
-.mdl h3{font-size:.95rem;margin-bottom:4px}
-.mdl .mb{font-family:monospace;font-size:.68rem;color:var(--c);margin-bottom:8px}
-.mdl p{font-size:.78rem;color:var(--t2);line-height:1.6;margin-bottom:14px}
-.mdl .mr{display:flex;gap:8px;justify-content:center}
-
-.metrics-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px}
-.mc{padding:8px;background:var(--bg1);border:1px solid var(--bd);border-radius:5px;text-align:center}
-.mc .ml{font-size:.55rem;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:2px}
-.mc .mv{font-family:monospace;font-size:1.1rem;font-weight:700}
-.mv.c{color:var(--c)}.mv.g{color:var(--g)}.mv.r{color:var(--r)}.mv.a{color:var(--a)}
-
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes pulse-r{0%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.3}100%{transform:scale(1);opacity:1}}
-@keyframes scandn{0%{top:0;opacity:.7}100%{top:100%;opacity:0}}
-@keyframes fup{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.fup{animation:fup .3s ease-out both}
+footer{margin-top:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--t3);line-height:1.9}
+footer a{color:var(--blue);text-decoration:none}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--s3);border:1px solid var(--bd2);color:var(--t1);font-family:var(--mono);font-size:12px;padding:10px 18px;border-radius:8px;transition:transform .3s;z-index:500;max-width:92vw;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="top">
-  <div class="logo"><span class="dot"></span>PourControl SCADA</div>
-  <div class="sep"></div>
-  <span class="tag">US 11,117,794 B2 — Detection mechanics</span>
-  <div class="rt">
-    <span class="clk" id="clk">T+0.00s</span>
-    <div class="sep"></div>
-    <button class="b" onclick="resetAll()">Reset</button>
-    <button class="b go" id="goBtn" onclick="launch()">Run</button>
-  </div>
-</div>
+<header>
+  <div class="kicker">Interactive patent demo</div>
+  <h1>The machine that <span class="drop">refuses to spill</span> 💧</h1>
+  <div class="patent-tag"><a href="https://patents.google.com/patent/US11117794B2/en" target="_blank" rel="noopener">US 11,117,794 B2</a> · Liquid Pouring Control · IBM → Kyndryl · De Lima Junior, Biondo Junior, Lima, Franco, Monteiro Vieira</div>
+  <p class="lede">Ordinary dispensers pour blind — fixed volume, fixed time, hope for the best. This one <b>looks first</b>: it wraps your container in infrared dots, builds a <b>3D model</b>, checks the material against the liquid, fires a <b>thermal pulse</b> to find invisible cracks, then watches the fill level through heat itself — and slams the valve shut the moment anything is wrong. <b>Bring it a bad container and try to make it spill.</b></p>
+</header>
 
-<div class="scbar" id="scbar"></div>
-
-<div class="layout">
-  <div class="main" id="mainArea">
-    <div class="metrics-row" id="topMetrics">
-      <div class="mc"><div class="ml">Dispensed</div><div class="mv c" id="xDisp">0 L</div></div>
-      <div class="mc"><div class="ml">Anomalies</div><div class="mv r" id="xAnom">0</div></div>
-      <div class="mc"><div class="ml">Avg fill</div><div class="mv g" id="xFill">0%</div></div>
+<!-- 1 · CHOICES -->
+<section>
+  <div class="sec-h"><span class="num">1</span><h2>Bring your container, pick your liquid</h2><span class="sub">container 116 · material properties · DB 106</span></div>
+  <div class="sec-b">
+    <div class="choicegrid">
+      <div class="chgroup"><h3>Container 116</h3><div class="chips" id="vesselChips"></div></div>
+      <div class="chgroup"><h3>Material to pour</h3><div class="chips" id="liquidChips"></div></div>
     </div>
-    <div class="stit"><span class="sb c"></span>Dispensing bays</div>
-    <div class="bays" id="bayGrid"></div>
+    <div class="runbar">
+      <button class="btn primary" id="goBtn" onclick="runPour()">▶ SCAN &amp; POUR</button>
+      <button class="btn danger" id="yankBtn" onclick="yank()" disabled>🫳 YANK THE CONTAINER</button>
+      <button class="btn danger" id="crackBtn" onclick="crackIt()" disabled>💥 CRACK IT MID-POUR</button>
+      <span class="hint" id="runHint">The sabotage buttons arm once pouring starts.</span>
+    </div>
+  </div>
+</section>
 
-    <div class="det-panel" id="detPanel">
-      <div class="det-head">
-        <div class="dh-title"><span class="dh-dot"></span>Detection analysis</div>
-        <span id="detBay" style="font-family:monospace;font-size:.68rem;color:var(--c)"></span>
+<!-- 2 · MACHINE -->
+<section>
+  <div class="sec-h"><span class="num">2</span><h2>The dispenser</h2><span class="sub">dispenser 110 · sensors 112 · weight platform</span></div>
+  <div class="sec-b">
+    <div class="stagewrap">
+      <div class="stage" id="stage">
+        <div class="head"><span class="brand">POURCONTROL</span><span class="eye"></span><span class="eye e2"></span></div>
+        <div class="nozzle"></div>
+        <div class="stream" id="stream"></div>
+        <div class="irdots" id="irdots"></div>
+        <div class="scanline" id="scanline"></div>
+        <div class="vessel" id="vessel"></div>
+        <div class="plat"><span class="platlbl">weight sensor · platform</span></div>
+        <div class="stamp" id="stamp"><span id="stampTxt"></span><small id="stampSub"></small></div>
       </div>
-      <div class="det-body" id="detBody"></div>
+      <div class="hud">
+        <h3>Sensor HUD · 112</h3>
+        <div class="hrow"><span class="hl">user 120</span><span class="hv" id="hUser">—</span></div>
+        <div class="hrow"><span class="hl">container</span><span class="hv" id="hVessel">—</span></div>
+        <div class="hrow"><span class="hl">3D volume</span><span class="hv c" id="hVol">—</span></div>
+        <div class="hrow"><span class="hl">wall / material</span><span class="hv" id="hMat">—</span></div>
+        <div class="hrow"><span class="hl">pulse test</span><span class="hv" id="hPulse">—</span></div>
+        <div class="hrow"><span class="hl">liquid</span><span class="hv" id="hLiq">—</span></div>
+        <div class="hrow"><span class="hl">compatibility</span><span class="hv" id="hCompat">—</span></div>
+        <div class="hrow"><span class="hl">fill (thermal λ)</span><span class="hv c" id="hFill">0%</span></div>
+        <div class="fillbar"><div class="fillfill" id="fillbar"></div></div>
+        <div class="hrow" style="margin-top:4px"><span class="hl">weight</span><span class="hv" id="hWeight">0 g</span></div>
+        <div class="hrow"><span class="hl">status</span><span class="hv a" id="hStatus">IDLE</span></div>
+      </div>
+    </div>
+    <div class="caption" id="caption"><span class="cicon">🤖</span><span>Pick a container and a liquid, then <b>SCAN &amp; POUR</b>. The machine never pours what it hasn't understood.</span></div>
+  </div>
+</section>
+
+<!-- 3 · PULSE LAB -->
+<section>
+  <div class="sec-h"><span class="num">3</span><h2>Thermal pulse lab — how it sees cracks</h2><span class="sub">FIG. 4 · excitation 402 → capture 404 → analysis 406</span></div>
+  <div class="sec-b">
+    <div class="pulsegrid">
+      <div class="pulsebox">
+        <h3>Temperature decay after pulse</h3>
+        <svg class="decay" viewBox="0 0 300 120" preserveAspectRatio="none">
+          <line class="axis" x1="26" y1="10" x2="26" y2="100"/>
+          <line class="axis" x1="26" y1="100" x2="294" y2="100"/>
+          <text x="4" y="16">T°</text><text x="270" y="114">time</text>
+          <polyline id="curveGood" stroke="#3ce08e" points=""/>
+          <polyline id="curveBad" stroke="#ff5a72" stroke-dasharray="5 3" points=""/>
+          <text x="200" y="30" fill="#ff5a72" id="lblBad" style="display:none">defect: slow decay</text>
+          <text x="200" y="90" fill="#3ce08e" id="lblGood" style="display:none">healthy wall</text>
+        </svg>
+        <div class="framecount">IR frames captured: <b id="frameN">0</b> / 500</div>
+      </div>
+      <div class="pulsebox">
+        <div class="pulse-note">A heat pulse is fired at the container wall and <b>200–500 infrared frames</b> record how the surface cools. A healthy wall sheds heat evenly and fast. A hidden crack or inclusion <b>traps the pulse</b> — its patch of surface cools slower, and the decay curves split. That temperature-rate difference <i>is</i> the defect detector: no X-ray, no contact, just heat and patience.</div>
+      </div>
     </div>
   </div>
+</section>
 
-  <div class="side">
-    <div class="stit"><span class="sb a"></span>Perturbation vectors</div>
-    <p style="font-size:.62rem;color:var(--t3);margin-bottom:8px">Click to force. Each vector has a distinct detection pathway shown when triggered.</p>
-    <div id="vecList" style="margin-bottom:16px"></div>
-
-    <div class="stit"><span class="sb g"></span>Event log</div>
-    <div id="logBox" style="max-height:calc(100vh - 380px);overflow-y:auto"></div>
+<!-- 4 · LOG -->
+<section>
+  <div class="sec-h"><span class="num">4</span><h2>Pouring control log</h2><span class="sub">pouring control program 104 → database 106</span></div>
+  <div class="sec-b">
+    <div class="logbox" id="log"><div><span class="lt">[00:00]</span> <span class="info">CTRL</span> pouring control program 104 online · dispenser 110 idle · platform zeroed</div></div>
   </div>
-</div>
+</section>
 
-<div class="mbg" id="mbg">
-  <div class="mdl">
-    <h3 id="mT">—</h3>
-    <div class="mb" id="mB"></div>
-    <p id="mD">—</p>
-    <div class="mr" id="mR"></div>
-  </div>
+<footer>
+  Built from the patent's own pipeline: IR dot projection → 3D model → material compatibility →<br>
+  thermal-pulse defect detection (FIG. 4) → wavelength fill tracking → weight-sensor anomaly stop<br>
+  <a href="https://patents.google.com/patent/US11117794B2/en" target="_blank" rel="noopener">Read US 11,117,794 B2 →</a>
+</footer>
+
 </div>
+<div id="toast"></div>
 
 <script>
-// =========================================================
+// ═══════════════════════════════════════════════════════
 // DATA
-// =========================================================
-const SCENARIOS=[
-  {id:'chem',icon:'⚗️',name:'Chemical processing',bays:4,
-    mats:['H₂SO₄ 98%','NaOH 2M','Acetone','IPA'],
-    conts:['HDPE drum 200L','SS reactor 500L','Glass carboy 20L','PP tank 100L'],
-    cols:['rgba(230,200,40,','rgba(120,200,140,','rgba(200,210,220,','rgba(180,170,230,'],
-    vols:[200,500,20,100],flows:[4.2,12,1.8,6]},
-  {id:'pharma',icon:'💊',name:'Pharmaceutical GMP',bays:5,
-    mats:['WFI','API Sol. A','Buffer pH 7.4','Saline 0.9%','mRNA payload'],
-    conts:['Glass vial 10ml','IV bag 500ml','Ampoule 5ml','SS tank 50L','Syringe 1ml'],
-    cols:['rgba(200,230,255,','rgba(255,210,120,','rgba(160,220,190,','rgba(190,210,255,','rgba(210,170,255,'],
-    vols:[0.01,0.5,0.005,50,0.001],flows:[0.02,0.8,0.01,5,0.003]},
-  {id:'food',icon:'🏭',name:'Food & beverage',bays:4,
-    mats:['Pasteurised milk','Apple juice','Craft IPA wort','Olive oil'],
-    conts:['PET bottle 1L','Tetra Pak 1L','SS keg 50L','Glass bottle 750ml'],
-    cols:['rgba(255,250,235,','rgba(230,190,60,','rgba(210,170,90,','rgba(200,210,110,'],
-    vols:[1,1,50,0.75],flows:[0.5,0.4,6,0.3]},
-  {id:'semi',icon:'🔬',name:'Semiconductor fab',bays:3,
-    mats:['HF 49%','Photoresist AZ5214','CMP slurry'],
-    conts:['Quartz bath 40L','Spin coater cup 5ml','CMP reservoir 20L'],
-    cols:['rgba(180,255,180,','rgba(255,190,110,','rgba(200,200,210,'],
-    vols:[40,0.005,20],flows:[2,0.001,3]}
-];
+// ═══════════════════════════════════════════════════════
+const VESSELS={
+ beaker:{ label:'Lab beaker', emoji:'🧪', sub:'borosilicate · thick',
+   w:76,h:120, taper:0, mat:'borosilicate 3.3 mm', maxTemp:500, chem:true, crack:false, vol:350, border:'#9fd8e8', density:1 },
+ cup:{ label:'Plastic cup', emoji:'🥤', sub:'thin PET · disposable',
+   w:70,h:104, taper:14, mat:'PET 0.3 mm', maxTemp:70, chem:false, crack:false, vol:300, border:'#e8d59f' },
+ mug:{ label:'Old mug', emoji:'☕', sub:'ceramic · suspicious',
+   w:82,h:96, taper:0, mat:'ceramic 4 mm', maxTemp:300, chem:true, crack:true, vol:250, border:'#d8a98f' },
+ shot:{ label:'Espresso cup', emoji:'🤏', sub:'tiny · 60 ml',
+   w:46,h:56, taper:8, mat:'porcelain 3 mm', maxTemp:300, chem:true, crack:false, vol:60, border:'#cfd3e8' },
+};
+const LIQUIDS={
+ juice:{ label:'Cold juice', emoji:'🧃', sub:'5 °C · benign', temp:5, chem:false, color:'linear-gradient(180deg,#ff9a4d,#e86a1f)', hot:false },
+ boil:{ label:'Boiling water', emoji:'♨️', sub:'98 °C', temp:98, chem:false, color:'linear-gradient(180deg,#bfe6f5,#7fb8d8)', hot:true },
+ acid:{ label:'Solvent (corrosive)', emoji:'⚗️', sub:'chemical hazard', temp:22, chem:true, color:'linear-gradient(180deg,#b8f77f,#6ecf3a)', hot:false },
+};
 
-const VECTORS=[
-  {id:'V1',name:'Container fracture',prob:.12,effect:'crack',
-    detection:{
-      method:'Thermal pulse + IR image sequence',
-      sensors:['IR projector','IR camera','Ultrasonic'],
-      steps:[
-        {label:'Thermal excitation',desc:'IR projector heats container surface evenly for 200ms. The thermal pulse propagates through the vessel wall.'},
-        {label:'IR image capture',desc:'IR camera records 200-500 frames of the surface temperature distribution as a function of time.'},
-        {label:'Decay rate analysis',desc:'Software compares temperature decay rates across the surface. Intact areas cool uniformly. Defective areas show differential decay because cracks alter thermal conductivity.'},
-        {label:'Defect localisation',desc:'Shape defects, depth, and edge anomalies extracted from the thermal gradient map. Fracture location and severity calculated.'}
-      ],
-      viz:'thermal_sequence'
-    }},
-  {id:'V2',name:'Overflow imminent',prob:.08,effect:'overflow',
-    detection:{
-      method:'3D model + thermal level tracking',
-      sensors:['IR camera','Ultrasonic'],
-      steps:[
-        {label:'3D volume extraction',desc:'IR dot projector and camera built a 3D model of the container at scan time. Surface border and maximum fill height were calculated.'},
-        {label:'Real-time level tracking',desc:'During pour, thermal variance between liquid and vessel wall produces different IR wavelengths. The liquid surface boundary is tracked frame by frame.'},
-        {label:'Rate projection',desc:'Software calculates the fill rate (Δlevel/Δtime) and projects when the liquid will reach the rim. If projected_time < safety_margin, overflow is flagged.'},
-        {label:'Emergency signal',desc:'Fill rate exceeds safe approach velocity. Valve shutoff signal sent to dispenser within 50ms.'}
-      ],
-      viz:'level_projection'
-    }},
-  {id:'V3',name:'Vessel removed',prob:.05,effect:'removed',
-    detection:{
-      method:'Weight sensor step-change detection',
-      sensors:['Weight sensor'],
-      steps:[
-        {label:'Continuous mass sampling',desc:'Weight sensor samples at 100 Hz. Expected mass = tare_weight + (flow_rate × elapsed_time × density).'},
-        {label:'Step-change detection',desc:'A sudden mass decrease exceeding 50g within 100ms triggers the interlock. This cannot be caused by normal pour dynamics.'},
-        {label:'Confirmation',desc:'Second reading 50ms later confirms the mass loss is sustained, not a vibration artefact.'},
-        {label:'Immediate halt',desc:'Valve closed. Dispenser locked. Any liquid in transit is caught by the drip tray.'}
-      ],
-      viz:'weight_step'
-    }},
-  {id:'V4',name:'Leak detected',prob:.10,effect:'leak',
-    detection:{
-      method:'Mass balance reconciliation',
-      sensors:['Weight sensor','Flow meter'],
-      steps:[
-        {label:'Volume dispensed',desc:'Flow meter tracks cumulative volume leaving the nozzle: V_dispensed (integrated from flow rate).'},
-        {label:'Mass on scale',desc:'Weight sensor reads actual mass on the platform: M_actual.'},
-        {label:'Expected vs actual',desc:'M_expected = tare + V_dispensed × ρ_material. If |M_actual − M_expected| > tolerance (5%), a leak is suspected.'},
-        {label:'Leak rate estimation',desc:'Leak rate = (M_expected − M_actual) / elapsed_time. Location unknown from weight data alone, but IR camera cross-check scans the vessel exterior for thermal anomaly from escaping liquid.'}
-      ],
-      viz:'mass_balance'
-    }},
-  {id:'V5',name:'Thermal exceedance',prob:.07,effect:'temp',
-    detection:{
-      method:'Surface temperature monitoring vs material rating',
-      sensors:['IR camera','Thermal sensor'],
-      steps:[
-        {label:'Material temperature reading',desc:'Inline thermal sensor measures material temperature at the nozzle: T_material.'},
-        {label:'Container rating lookup',desc:'Database lookup: container material has a maximum safe temperature. E.g., PET softens above 70°C, polystyrene above 80°C, borosilicate glass tolerates 500°C.'},
-        {label:'Surface tracking',desc:'IR camera monitors container surface temperature during pour. Thermal conduction from hot liquid raises wall temperature over time.'},
-        {label:'Threshold breach',desc:'If T_surface approaches T_max_rating within 10% margin, the system flags thermal exceedance. Hot liquid in a weak container risks structural failure.'}
-      ],
-      viz:'temp_threshold'
-    }},
-  {id:'V6',name:'Contamination risk',prob:.05,effect:'contam',
-    detection:{
-      method:'Line flush verification + spectral cross-check',
-      sensors:['IR camera','Flow meter'],
-      steps:[
-        {label:'Previous material log',desc:'Database records what material was last dispensed through this nozzle line. If different from current request, a flush protocol is required.'},
-        {label:'Flush volume check',desc:'Flow meter verifies that the minimum flush volume was completed before the current pour started.'},
-        {label:'Spectral verification',desc:'IR camera checks the initial pour stream wavelength signature against the expected material profile. A mismatch indicates residual contamination.'},
-        {label:'Contamination flag',desc:'If flush was incomplete or spectral mismatch exceeds threshold, the system halts and flags contamination risk.'}
-      ],
-      viz:'spectral'
-    }},
-  {id:'V7',name:'Nominal',prob:.53,effect:'none',detection:null}
-];
+let selV='mug', selL='boil';
+let phase='idle';   // idle | scanning | pouring | done
+let pourAbort=null; // 'yank' | 'crack' | null
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-// =========================================================
-// STATE
-// =========================================================
-let G={sc:null,running:false,t0:0,fid:null,bays:[],disp:0,anom:0,overs:0,forced:null,modalRes:null};
-
-// =========================================================
-// INIT
-// =========================================================
-function init(){
-  document.getElementById('scbar').innerHTML=SCENARIOS.map(s=>`<div class="sc" id="sc-${s.id}" onclick="pickSc('${s.id}')">${s.icon} ${s.name}</div>`).join('');
-  document.getElementById('vecList').innerHTML=VECTORS.filter(v=>v.effect!=='none').map(v=>`<div class="vec" id="gv-${v.id}" onclick="forceV('${v.id}')"><div class="vn">${v.name}</div><div class="vp">P=${(v.prob*100).toFixed(0)}% · ${v.detection.method}</div></div>`).join('');
+const t0=Date.now();
+function log(tag,msg,cls='info'){
+  const s=Math.floor((Date.now()-t0)/1000),mm=String(Math.floor(s/60)).padStart(2,'0'),ss=String(s%60).padStart(2,'0');
+  $('log').insertAdjacentHTML('beforeend',`<div><span class="lt">[${mm}:${ss}]</span> <span class="${cls}">${tag}</span> ${msg}</div>`);
+  $('log').scrollTop=$('log').scrollHeight;
 }
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
+function cap(icon,html){$('caption').innerHTML=`<span class="cicon">${icon}</span><span>${html}</span>`;}
+function hud(id,val,cls){const e=$(id);e.textContent=val;e.className='hv'+(cls?' '+cls:'');}
 
-function pickSc(id){
-  if(G.running)return;
-  G.sc=SCENARIOS.find(s=>s.id===id);
-  document.querySelectorAll('.sc').forEach(e=>e.classList.remove('sel'));
-  document.getElementById(`sc-${id}`).classList.add('sel');
-  buildBays();
+// ═══════════ RENDER CHOICES & VESSEL ═══════════
+function renderChips(){
+  $('vesselChips').innerHTML=Object.entries(VESSELS).map(([k,v])=>`
+   <div class="chip ${selV===k?'sel':''}" onclick="pick('v','${k}')"><div class="ce">${v.emoji}</div><div class="cl">${v.label}</div><div class="cs">${v.sub}</div></div>`).join('');
+  $('liquidChips').innerHTML=Object.entries(LIQUIDS).map(([k,l])=>`
+   <div class="chip ${selL===k?'sel':''}" onclick="pick('l','${k}')"><div class="ce">${l.emoji}</div><div class="cl">${l.label}</div><div class="cs">${l.sub}</div></div>`).join('');
 }
-function forceV(vid){
-  if(G.running)return;
-  document.querySelectorAll('.vec').forEach(e=>e.classList.remove('forced'));
-  if(G.forced===vid){G.forced=null;return}
-  G.forced=vid;
-  document.getElementById(`gv-${vid}`).classList.add('forced');
-  glog(`Vector "${VECTORS.find(v=>v.id===vid).name}" forced`,'W');
+function pick(which,k){
+  if(phase==='scanning'||phase==='pouring') return;
+  if(which==='v') selV=k; else selL=k;
+  renderChips(); placeVessel(); resetHUD();
+  $('runHint').textContent=`${VESSELS[selV].label} + ${LIQUIDS[selL].label} — ready.`;
 }
-
-function buildBays(){
-  const s=G.sc;if(!s)return;
-  G.bays=[];
-  const grid=document.getElementById('bayGrid');grid.innerHTML='';
-  for(let i=0;i<s.bays;i++){
-    const b={id:`BAY-${String(i+1).padStart(2,'0')}`,idx:i,
-      mat:s.mats[i%s.mats.length],cont:s.conts[i%s.conts.length],
-      col:s.cols[i%s.cols.length],vol:s.vols[i%s.vols.length],
-      flow:s.flows[i%s.flows.length],
-      fill:0,target:80+Math.random()*12,state:'idle',anom:null};
-    G.bays.push(b);
-    const u=b.vol>=1?'L':'ml',dv=b.vol>=1?b.vol:b.vol*1000;
-    grid.innerHTML+=`<div class="bay" id="bay-${i}"><div class="bh"><span class="bid">${b.id}</span><span class="bst i" id="bs-${i}">IDLE</span></div><div class="bb"><div class="vessel"><div class="v-noz"></div><div class="v-str" id="vs-${i}" style="background:${b.col}0.6)"></div><div class="v-rim"></div><div class="v-body"><div class="v-liq" id="vl-${i}" style="height:0%;background:linear-gradient(180deg,${b.col}0.45),${b.col}0.75))"></div><div class="v-scan" id="vsc-${i}"></div></div><div class="v-anom" id="va-${i}"></div></div><div class="bdata"><div class="dr"><span class="dl">Material</span><span class="dv" style="font-size:.66rem">${b.mat}</span></div><div class="dr"><span class="dl">Vessel</span><span class="dv" style="font-size:.63rem;color:var(--t2)">${b.cont}</span></div><div class="dr"><span class="dl">Capacity</span><span class="dv c">${dv} ${u}</span></div><div class="dr"><span class="dl">Fill</span><span class="dv g" id="bf-${i}">0%</span></div><div class="dr"><span class="dl">Status</span><span class="dv" id="bx-${i}">Standby</span></div><div class="bprog"><div class="bf" id="bp-${i}"></div></div></div></div><div class="bfoot">${['IR','CAM','US','WT','TH'].map(x=>`<span class="stag off" id="st-${i}-${x}"><span class="si"></span>${x}</span>`).join('')}</div></div>`;
-  }
-  document.getElementById('detPanel').classList.remove('vis');
-}
-
-// =========================================================
-// HELPERS
-// =========================================================
-function delay(ms){return new Promise(r=>setTimeout(r,ms))}
-function rnd(a,b){return a+Math.random()*(b-a)}
-
-function glog(msg,type='I',bay='SYS'){
-  const t=G.running?((performance.now()-G.t0)/1000).toFixed(2):'0.00';
-  const box=document.getElementById('logBox');
-  const el=document.createElement('div');el.className='log-l fup';
-  el.innerHTML=`<span class="lt">T+${t}</span><span class="lb ${type}">${bay}</span><span class="lm">${msg}</span>`;
-  box.prepend(el);if(box.children.length>150)box.removeChild(box.lastChild);
-}
-
-function setBst(b,cls,txt){
-  b.state=txt.toLowerCase();
-  document.getElementById(`bs-${b.idx}`).className='bst '+cls;
-  document.getElementById(`bs-${b.idx}`).textContent=txt;
-  document.getElementById(`bx-${b.idx}`).textContent=txt;
-  const bay=document.getElementById(`bay-${b.idx}`);
-  bay.className='bay'+(cls==='r'?' act':'')+(cls==='e'?' alm':'')+(cls==='o'?' ok':'')+(cls==='w'?' act':'');
-}
-function setSt(i,s,on){document.getElementById(`st-${i}-${s}`).className=on?'stag on':'stag off'}
-
-function showModal(t,bay,d,btns){
-  return new Promise(res=>{
-    document.getElementById('mT').textContent=t;
-    document.getElementById('mB').textContent=bay;
-    document.getElementById('mD').textContent=d;
-    const r=document.getElementById('mR');
-    r.innerHTML=btns.map(x=>`<button class="b ${x.c||''}" data-v="${x.v}">${x.l}</button>`).join('');
-    r.querySelectorAll('button').forEach(x=>x.addEventListener('click',()=>{document.getElementById('mbg').classList.remove('sh');res(x.dataset.v)}));
-    document.getElementById('mbg').classList.add('sh');
-  });
-}
-
-// =========================================================
-// DETECTION VISUALISATION
-// =========================================================
-async function showDetection(bay,vec){
-  const dp=document.getElementById('detPanel');
-  dp.classList.add('vis');
-  document.getElementById('detBay').textContent=`${bay.id} · ${vec.name}`;
-  const body=document.getElementById('detBody');
-
-  // Build detection steps
-  const det=vec.detection;
-  body.innerHTML=`
-    <div style="margin-bottom:12px">
-      <div style="font-size:.7rem;color:var(--t3);margin-bottom:4px">Detection method</div>
-      <div style="font-size:.82rem;font-weight:600">${det.method}</div>
-      <div style="margin-top:6px;display:flex;gap:4px">${det.sensors.map(s=>`<span class="stag on" style="background:var(--bg3)"><span class="si"></span>${s}</span>`).join('')}</div>
+function placeVessel(){
+  const v=VESSELS[selV], L=LIQUIDS[selL];
+  const ves=$('vessel');
+  ves.className='vessel';
+  const clip=v.taper?`polygon(0 0,100% 0,${100-v.taper}% 100%,${v.taper}% 100%)`:'none';
+  ves.innerHTML=`
+    <div class="wire"><span class="wl" id="wireLbl"></span></div>
+    <div class="body" id="vbody" style="width:${v.w}px;height:${v.h}px;border-color:${v.border};border-radius:4px 4px 7px 7px;${v.taper?`clip-path:${clip};border-radius:0;`:''}">
+      <div class="liq" id="liq" style="background:${L.color}"></div>
+      <span class="crackmark" id="crackmark" style="left:8%;top:46%">⚡</span>
     </div>
-    ${det.steps.map((s,i)=>`
-      <div class="det-step" id="ds-${i}">
-        <div class="ds-head">
-          <span class="ds-label">${s.label}</span>
-          <span class="ds-num">STEP ${i+1}/${det.steps.length}</span>
-        </div>
-        <div class="ds-desc">${s.desc}</div>
-        <div id="dsv-${i}"></div>
-      </div>
-    `).join('')}
-  `;
+    <div class="target" id="targetLine"><span class="tl" id="targetLbl"></span></div>
+    <span class="steam" id="st1">〰</span><span class="steam s2" id="st2">〰</span><span class="steam s3" id="st3">〰</span>`;
+  ['st1','st2','st3'].forEach(id=>$(id).style.display='none');
+  // stream length reaches vessel top
+  $('stream').style.setProperty('--h', '0px');
+  $('stream').dataset.toTop = (380-38-v.h-76-14); // approx; recomputed at pour
+}
+function resetHUD(){
+  ['hUser','hVessel','hVol','hMat','hPulse','hLiq','hCompat'].forEach(id=>hud(id,'—'));
+  hud('hFill','0%','hv c'); $('fillbar').style.width='0';
+  hud('hWeight','0 g'); hud('hStatus','IDLE','a');
+  $('stamp').className='stamp';
+  $('vessel').classList.remove('modeled');
+}
 
-  dp.scrollIntoView({behavior:'smooth',block:'start'});
+// ═══════════ MAIN FLOW ═══════════
+function stampIt(ok,txt,sub){
+  $('stampTxt').textContent=txt; $('stampSub').textContent=sub||'';
+  const st=$('stamp'); st.className='stamp '+(ok?'ok':'no'); void st.offsetWidth; st.classList.add('on');
+}
+function setButtons(){
+  $('goBtn').disabled = (phase==='scanning'||phase==='pouring');
+  $('yankBtn').disabled = phase!=='pouring';
+  $('crackBtn').disabled = phase!=='pouring' || VESSELS[selV].crack;
+}
 
-  // Animate each step
-  for(let i=0;i<det.steps.length;i++){
-    const el=document.getElementById(`ds-${i}`);
-    el.classList.add('active');
-    const vizEl=document.getElementById(`dsv-${i}`);
-
-    // Step-specific visualisation
-    if(det.viz==='thermal_sequence' && i===2){
-      await renderThermalFrames(vizEl, bay);
-    } else if(det.viz==='level_projection' && i===2){
-      await renderLevelProjection(vizEl, bay);
-    } else if(det.viz==='weight_step' && i===1){
-      await renderWeightStep(vizEl, bay);
-    } else if(det.viz==='mass_balance' && i===2){
-      await renderMassBalance(vizEl, bay);
-    } else if(det.viz==='temp_threshold' && i===3){
-      await renderTempThreshold(vizEl, bay);
-    } else if(det.viz==='spectral' && i===2){
-      await renderSpectral(vizEl, bay);
-    } else {
-      await delay(rnd(500,900));
-    }
-
-    el.classList.remove('active');
-    el.classList.add(i===det.steps.length-1?'fail':'done');
-    glog(`Detection step ${i+1}: ${det.steps[i].label}`,'W',bay.id);
+async function runPour(){
+  if(phase==='scanning'||phase==='pouring') return;
+  const v=VESSELS[selV], L=LIQUIDS[selL];
+  phase='scanning'; pourAbort=null; setButtons();
+  placeVessel(); resetHUD();
+  // --- request & auth ---
+  hud('hStatus','AUTH','a');
+  cap('🪪',`Container on the platform. Identifying the user…`);
+  log('AUTH','request detected — user identifier 120 (face) checking against database 106','info');
+  await sleep(800);
+  hud('hUser','igor ✓','g');
+  log('AUTH','user “igor” authorized for all materials','ok');
+  // --- IR dot scan / 3D model ---
+  hud('hStatus','SCANNING','a'); hud('hVessel',v.label);
+  $('irdots').classList.add('on'); $('scanline').classList.add('on');
+  cap('🔦',`<b>Infrared dot projector</b> wraps the container in invisible dots; the <b>IR camera</b> reads them back to build a 3D model…`);
+  log('SCAN','IR dot projector 602 + camera 604 → point cloud of container 116','cy');
+  await sleep(1700);
+  $('irdots').classList.remove('on'); $('scanline').classList.remove('on');
+  $('vessel').classList.add('modeled');
+  $('wireLbl').textContent=`3D model · ${v.vol} ml`;
+  hud('hVol',v.vol+' ml','c'); hud('hMat',v.mat);
+  hud('hLiq',`${L.label} · ${L.temp} °C`);
+  log('SCAN',`digital twin built — volume ${v.vol} ml, wall ${v.mat}`,'ok');
+  cap('📐',`No pre-set portion sizes here: the pour target comes from <b>this container's own 3D volume</b> — ${v.vol} ml, filled to 85%.`);
+  await sleep(1100);
+  // --- thermal pulse test ---
+  hud('hStatus','PULSE TEST','a');
+  cap('🔥',`Thermal pulse fired at the wall — recording the cool-down, frame by frame…`);
+  log('PULSE','thermal excitation 402 → capturing IR image sequence 404','cy');
+  await runDecay(v.crack);
+  if(v.crack){
+    hud('hPulse','DEFECT','r');
+    $('crackmark').style.opacity='1';
+    stampIt(false,'REFUSED','hairline crack — decay anomaly');
+    hud('hStatus','REFUSED','r'); hud('hCompat','—');
+    cap('🚫',`<b>Refused before a single drop.</b> The pulse found a patch that cools too slowly — a hairline crack invisible to the eye. The event is logged to database 106 so this mug is recognized instantly next time.`);
+    log('PULSE','decay-rate anomaly at wall sector 3 — crack/inclusion detected (408)','err');
+    log('CTRL','pour denied — container integrity failed · profile saved to DB 106','err');
+    phase='done'; setButtons(); return;
   }
-}
-
-// --- Thermal frame sequence ---
-async function renderThermalFrames(el,bay){
-  el.innerHTML=`<div style="font-size:.62rem;color:var(--t3);margin-bottom:4px">IR thermal image sequence (200 frames sampled to 8)</div><div class="therm-seq" id="tseq"></div>`;
-  const seq=document.getElementById('tseq');
-  for(let f=0;f<8;f++){
-    const frame=document.createElement('div');
-    frame.className='therm-frame'+(f>=6?' defect':'');
-    const cvs=document.createElement('canvas');cvs.width=48;cvs.height=48;
-    frame.appendChild(cvs);
-    const lbl=document.createElement('div');lbl.className='tf-label';lbl.textContent=`t=${(f*30)}ms`;
-    frame.appendChild(lbl);
-    seq.appendChild(frame);
-
-    const ctx=cvs.getContext('2d');
-    for(let y=0;y<12;y++)for(let x=0;x<12;x++){
-      let heat=Math.max(0,1-f*0.12-Math.random()*0.15);
-      // Defect area: slower decay
-      if(f>=3 && x>=4 && x<=7 && y>=3 && y<=5){
-        heat=Math.min(1,heat+0.3+Math.random()*0.2);
-      }
-      const r=Math.floor(heat*255),g=Math.floor(heat*60),b=Math.floor((1-heat)*80);
-      ctx.fillStyle=`rgb(${r},${g},${b})`;
-      ctx.fillRect(x*4,y*4,4,4);
-    }
-    await delay(200);
+  hud('hPulse','CLEAN','g');
+  log('PULSE','decay uniform across surface — no inclusions found','ok');
+  await sleep(500);
+  // --- compatibility ---
+  hud('hStatus','COMPAT','a');
+  let refuse=null;
+  if(L.temp>v.maxTemp) refuse=[`${L.temp} °C into ${v.mat} (rated ${v.maxTemp} °C)`,'thermal rating exceeded'];
+  else if(L.chem&&!v.chem) refuse=['corrosive solvent vs PET wall','chemical attack risk'];
+  if(refuse){
+    hud('hCompat','REFUSED','r');
+    stampIt(false,'REFUSED',refuse[1]);
+    hud('hStatus','REFUSED','r');
+    cap('🚫',`<b>Bad match:</b> ${refuse[0]}. The program checks the liquid's temperature, corrosiveness and chemistry against the wall material <i>before</i> the valve ever opens.`);
+    log('COMPAT',`material check failed — ${refuse[0]}`,'err');
+    log('CTRL','pour denied — logged to database 106','err');
+    phase='done'; setButtons(); return;
   }
-  el.innerHTML+=`<div class="math-box" style="margin-top:8px"><span class="dim">// Decay rate analysis</span><br>τ_intact = 45ms &nbsp; τ_defect = 112ms<br><span class="bad">Δτ = 67ms &gt; threshold (20ms) → FRACTURE CONFIRMED</span><br><span class="dim">Location: row 3-5, col 4-7 (vessel mid-section)</span></div>`;
-  await delay(400);
-}
-
-// --- Level projection ---
-async function renderLevelProjection(el,bay){
-  const cvs=document.createElement('canvas');cvs.width=320;cvs.height=80;cvs.style.cssText='width:100%;height:80px;background:var(--bg);border:1px solid var(--bd);border-radius:4px';
-  el.innerHTML=`<div style="font-size:.62rem;color:var(--t3);margin-bottom:4px">Fill level vs time — projected overflow</div>`;
-  el.appendChild(cvs);
-  const ctx=cvs.getContext('2d');
-
-  // Draw threshold line
-  ctx.strokeStyle='rgba(255,45,85,.5)';ctx.setLineDash([4,3]);
-  ctx.beginPath();ctx.moveTo(0,10);ctx.lineTo(320,10);ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle='rgba(255,45,85,.7)';ctx.font='9px monospace';ctx.fillText('RIM',2,9);
-
-  // Draw fill curve
-  const pts=[];
-  for(let i=0;i<=40;i++){
-    const x=i*8;
-    const t=i/40;
-    let y=80-t*t*85; // accelerating fill
-    pts.push({x,y:Math.max(5,y)});
+  hud('hCompat','OK ✓','g');
+  log('COMPAT',`${L.label} vs ${v.mat} — within thermal & chemical limits`,'ok');
+  stampIt(true,'APPROVED','valve opening');
+  await sleep(900);
+  $('stamp').className='stamp';
+  // --- pour ---
+  phase='pouring'; setButtons();
+  hud('hStatus','POURING','g');
+  const vb=$('vbody'), liq=$('liq'), stream=$('stream');
+  // stream geometry: from nozzle to vessel top
+  const stageR=$('stage').getBoundingClientRect(), vbR=vb.getBoundingClientRect();
+  stream.style.background=L.color; stream.style.height=Math.max(30,(vbR.top-stageR.top-76))+'px';
+  if(L.hot) ['st1','st2','st3'].forEach(id=>$(id).style.display='block');
+  // target line at 85%
+  const tgt=$('targetLine'); tgt.style.bottom='85%'; tgt.style.opacity='1';
+  $('targetLbl').textContent='target · '+Math.round(v.vol*.85)+' ml';
+  cap('🫗',`Pouring. The sensors read the fill level through <b>heat</b>: the liquid changes the wall's surface temperature, and that wavelength shift is the level gauge.`);
+  log('POUR',`valve open — thermal wavelength tracking active (FIG. 5, 506)`,'info');
+  // wall-clock driven fill (~4.5 s) so tab throttling can't stretch it;
+  // abort stays responsive because we re-check every tick
+  let fill=0; const gPerPct=v.vol*.01*(L.temp>50?0.96:1.0);
+  const pourDur=4500, pStart=Date.now();
+  while(fill<85){
+    if(pourAbort) break;
+    fill=Math.min(85, (Date.now()-pStart)/pourDur*85);
+    liq.style.height=fill+'%';
+    hud('hFill',Math.round(fill)+'%','c'); $('fillbar').style.width=(fill/85*100)+'%';
+    hud('hWeight',Math.round(fill*gPerPct)+' g');
+    await sleep(90);
   }
-  ctx.strokeStyle='var(--c)';ctx.lineWidth=2;ctx.beginPath();
-  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-  ctx.stroke();
-
-  // Projected (dashed)
-  ctx.strokeStyle='rgba(255,45,85,.8)';ctx.setLineDash([3,3]);ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(pts[30].x,pts[30].y);ctx.lineTo(320,5);ctx.stroke();
-
-  ctx.fillStyle='var(--c)';ctx.font='8px monospace';ctx.fillText('actual',5,70);
-  ctx.fillStyle='var(--r)';ctx.fillText('projected →',220,25);
-
-  el.innerHTML+=`<div class="math-box" style="margin-top:8px"><span class="dim">// Rate projection</span><br>Δlevel/Δt = 4.2 mm/s &nbsp; headroom = 8mm<br>time_to_rim = 1.9s &nbsp; safety_margin = 3.0s<br><span class="bad">1.9s &lt; 3.0s → OVERFLOW IMMINENT</span></div>`;
-  await delay(800);
-}
-
-// --- Weight step change ---
-async function renderWeightStep(el,bay){
-  const cvs=document.createElement('canvas');cvs.width=320;cvs.height=80;cvs.style.cssText='width:100%;height:80px;background:var(--bg);border:1px solid var(--bd);border-radius:4px';
-  el.innerHTML=`<div style="font-size:.62rem;color:var(--t3);margin-bottom:4px">Weight sensor @ 100Hz — step-change detection</div>`;
-  el.appendChild(cvs);
-  const ctx=cvs.getContext('2d');
-
-  // Normal ramp then sudden drop
-  ctx.strokeStyle='var(--g)';ctx.lineWidth=2;ctx.beginPath();
-  for(let i=0;i<200;i++){
-    const x=i*1.6;
-    let y;
-    if(i<140) y=75-i*0.4+Math.random()*2; // rising
-    else y=75-10+Math.random()*2; // dropped to near tare
-    if(i===140){ctx.stroke();ctx.strokeStyle='var(--r)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,75-140*0.4)}
-    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  }
-  ctx.stroke();
-
-  // Annotations
-  ctx.fillStyle='var(--r)';ctx.font='9px monospace';
-  ctx.fillText('↓ −480g in 80ms',228,30);
-  ctx.fillStyle='var(--g)';ctx.fillText('normal fill ramp',10,70);
-
-  el.innerHTML+=`<div class="math-box" style="margin-top:8px"><span class="dim">// Step-change detection</span><br>ΔM = −480g in 80ms (sample window)<br>threshold = 50g / 100ms<br><span class="bad">480g ≫ 50g → VESSEL REMOVED</span><br><span class="dim">Confirmation read: +50ms → mass still at tare</span></div>`;
-  await delay(600);
-}
-
-// --- Mass balance ---
-async function renderMassBalance(el,bay){
-  const dispensed=(bay.fill/100*bay.vol).toFixed(bay.vol>=1?2:4);
-  const density=1.02;
-  const expected=(dispensed*density).toFixed(bay.vol>=1?1:3);
-  const actual=(expected*0.88).toFixed(bay.vol>=1?1:3);
-  const unit=bay.vol>=1?'kg':'g';
-  el.innerHTML=`<div class="math-box"><span class="dim">// Mass balance reconciliation</span><br><br><span class="eq">V_dispensed</span> = flow_integral = <span class="eq">${dispensed} ${bay.vol>=1?'L':'ml'}</span><br><span class="eq">M_expected</span> = tare + V × ρ = tare + ${dispensed} × ${density} = <span class="eq">${expected} ${unit}</span><br><span class="eq">M_actual</span> (scale) = <span class="bad">${actual} ${unit}</span><br><br>|M_actual − M_expected| = <span class="bad">${(expected-actual).toFixed(bay.vol>=1?1:3)} ${unit}</span><br>tolerance = 5% × ${expected} = ${(expected*0.05).toFixed(bay.vol>=1?2:4)} ${unit}<br><br><span class="bad">${(expected-actual).toFixed(bay.vol>=1?1:3)} ≫ ${(expected*0.05).toFixed(bay.vol>=1?2:4)} → LEAK CONFIRMED</span><br><span class="dim">Leak rate ≈ ${((expected-actual)/((bay.fill/100)*10)).toFixed(bay.vol>=1?2:4)} ${unit}/s</span></div>`;
-  await delay(800);
-}
-
-// --- Temperature threshold ---
-async function renderTempThreshold(el,bay){
-  el.innerHTML=`<div style="font-size:.62rem;color:var(--t3);margin-bottom:4px">Surface temperature vs vessel rating</div>
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-    <div style="flex:1;height:20px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;position:relative;overflow:hidden">
-      <div style="height:100%;width:92%;background:linear-gradient(90deg,var(--g),var(--a),var(--r));border-radius:3px;opacity:.7"></div>
-      <div style="position:absolute;top:0;left:78%;width:2px;height:100%;background:var(--r)"></div>
-      <div style="position:absolute;top:0;left:92%;width:10px;height:100%;background:rgba(255,45,85,.3)"></div>
-    </div>
-  </div>
-  <div style="display:flex;justify-content:space-between;font-family:monospace;font-size:.55rem;color:var(--t3)"><span>0°C</span><span style="color:var(--a)">T_max=70°C</span><span style="color:var(--r)">T_surface=88°C</span></div>
-  <div class="math-box" style="margin-top:8px"><span class="dim">// Threshold evaluation</span><br>T_material (nozzle) = 95°C<br>Container rating (PET) = 70°C max<br>T_surface (measured) = 88°C<br>Margin = (T_max − T_surface) / T_max = <span class="bad">−25.7%</span><br><span class="bad">Surface exceeds rating → THERMAL EXCEEDANCE</span></div>`;
-  await delay(800);
-}
-
-// --- Spectral cross-check ---
-async function renderSpectral(el,bay){
-  const cvs=document.createElement('canvas');cvs.width=320;cvs.height=80;cvs.style.cssText='width:100%;height:80px;background:var(--bg);border:1px solid var(--bd);border-radius:4px';
-  el.innerHTML=`<div style="font-size:.62rem;color:var(--t3);margin-bottom:4px">IR spectral signature — expected vs observed</div>`;
-  el.appendChild(cvs);
-  const ctx=cvs.getContext('2d');
-
-  // Expected spectrum
-  ctx.strokeStyle='rgba(0,212,255,.6)';ctx.lineWidth=1.5;ctx.beginPath();
-  for(let i=0;i<320;i++){
-    const y=40+Math.sin(i*0.08)*15+Math.sin(i*0.2)*8;
-    i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);
-  }
-  ctx.stroke();
-
-  // Observed (shifted, different peaks)
-  ctx.strokeStyle='rgba(255,45,85,.8)';ctx.lineWidth=1.5;ctx.beginPath();
-  for(let i=0;i<320;i++){
-    const y=40+Math.sin(i*0.08+0.5)*12+Math.sin(i*0.15)*10+Math.cos(i*0.3)*5;
-    i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);
-  }
-  ctx.stroke();
-
-  ctx.fillStyle='var(--c)';ctx.font='8px monospace';ctx.fillText('expected',5,15);
-  ctx.fillStyle='var(--r)';ctx.fillText('observed',5,75);
-
-  el.innerHTML+=`<div class="math-box" style="margin-top:8px"><span class="dim">// Spectral cross-correlation</span><br>correlation(expected, observed) = <span class="bad">0.41</span><br>threshold = 0.85<br><span class="bad">0.41 &lt; 0.85 → RESIDUAL CONTAMINATION</span><br><span class="dim">Previous line material: ${bay.mat==='WFI'?'API Sol. A':'NaOH 2M'}</span><br><span class="dim">Flush volume completed: 72% of minimum</span></div>`;
-  await delay(600);
-}
-
-// =========================================================
-// BAY SIMULATION
-// =========================================================
-async function runBay(bay){
-  await delay(bay.idx*rnd(200,600));
-
-  // Auth
-  setBst(bay,'r','AUTH');setSt(bay.idx,'CAM',true);
-  glog('Biometric scan initiated','I',bay.id);
-  await delay(rnd(500,1000));
-  glog('Operator authenticated','O',bay.id);
-  setSt(bay.idx,'CAM',false);
-
-  // Scan
-  setBst(bay,'r','SCAN');
-  setSt(bay.idx,'IR',true);setSt(bay.idx,'US',true);
-  document.getElementById(`vsc-${bay.idx}`).classList.add('on');
-  glog(`3D scanning: ${bay.cont}`,  'I',bay.id);
-  await delay(rnd(700,1400));
-  glog('Container model built — volume and borders extracted','O',bay.id);
-  document.getElementById(`vsc-${bay.idx}`).classList.remove('on');
-  setSt(bay.idx,'IR',false);setSt(bay.idx,'US',false);
-
-  // Pour
-  setBst(bay,'r','POURING');
-  setSt(bay.idx,'WT',true);setSt(bay.idx,'TH',true);setSt(bay.idx,'US',true);
-  const str=document.getElementById(`vs-${bay.idx}`);str.classList.add('on');str.style.height='80px';
-  glog('Valve open — pouring','O',bay.id);
-
-  // Pick vector
-  let vec=null;const fireAt=rnd(20,65);
-  if(G.forced){vec=VECTORS.find(v=>v.id===G.forced)}
-  else{let roll=Math.random(),cum=0;for(const v of VECTORS){cum+=v.prob;if(roll<=cum){vec=v;break}}}
-
-  let anomHit=false;
-  await new Promise(resolve=>{
-    const iv=setInterval(()=>{
-      if(!G.running){clearInterval(iv);resolve();return}
-      bay.fill=Math.min(bay.fill+rnd(0.7,2),100);
-      document.getElementById(`vl-${bay.idx}`).style.height=bay.fill+'%';
-      document.getElementById(`bf-${bay.idx}`).textContent=Math.round(bay.fill)+'%';
-      document.getElementById(`bp-${bay.idx}`).style.width=bay.fill+'%';
-      if(vec&&vec.effect!=='none'&&bay.fill>=fireAt&&!anomHit){
-        anomHit=true;clearInterval(iv);handleAnomaly(bay,vec).then(resolve);return;
-      }
-      if(bay.fill>=bay.target){clearInterval(iv);resolve()}
-    },rnd(80,150));
-  });
-
-  str.classList.remove('on');str.style.height='0';
-  setSt(bay.idx,'WT',false);setSt(bay.idx,'TH',false);setSt(bay.idx,'US',false);
-
-  if(bay.state==='halted'){
-    document.getElementById(`bp-${bay.idx}`).classList.add('rf');
-    glog(`Halted at ${Math.round(bay.fill)}%`,'E',bay.id);
+  stream.style.height='0';
+  if(pourAbort==='yank'){
+    $('vessel').classList.add('gone');
+    $('stage').classList.add('alarm'); setTimeout(()=>$('stage').classList.remove('alarm'),1600);
+    stampIt(false,'POUR HALTED','weight step-change — container gone');
+    hud('hStatus','HALTED','r'); hud('hWeight','0 g','r');
+    cap('🛑',`You yanked it — and the <b>weight sensor</b> saw the mass vanish in one frame. Valve shut in milliseconds; the floor stays dry. Error logged to database 106.`);
+    log('WEIGHT','step-change to 0 g mid-pour — container removed (anomaly)','err');
+    log('CTRL','dispenser 110 signalled to STOP — event logged to DB 106','err');
+  } else if(pourAbort==='crack'){
+    $('crackmark').style.opacity='1';
+    $('stage').classList.add('alarm'); setTimeout(()=>$('stage').classList.remove('alarm'),1600);
+    stampIt(false,'POUR HALTED','thermal signature of a fresh crack');
+    hud('hStatus','HALTED','r'); hud('hPulse','DEFECT','r');
+    cap('🛑',`A crack opened mid-pour — the wall's thermal pattern deformed and the leak began reading on the <b>weight sensor</b>. Stopped instantly, logged, and this container is now blacklisted in DB 106.`);
+    log('MONITOR','surface thermal pattern deformed — crack signature during pour','err');
+    log('CTRL','dispenser 110 signalled to STOP — container flagged in DB 106','err');
   } else {
-    setBst(bay,'o','COMPLETE');
-    document.getElementById(`bp-${bay.idx}`).classList.add('gf');
-    G.disp+=bay.vol*bay.fill/100;
-    glog(`Complete — ${Math.round(bay.fill)}%`,'O',bay.id);
+    stampIt(true,'SERVED','stopped at the 3D-model level');
+    hud('hStatus','DONE','g');
+    cap('✅',`Stopped at <b>${Math.round(v.vol*.85)} ml</b> — exactly 85% of <i>this</i> container's modeled volume. A thimble or a bucket, same code: the level comes from the scan, not a preset. Enjoy.`);
+    log('POUR',`desired level reached — dispenser stopped · ${Math.round(v.vol*.85)} ml served`,'ok');
+    log('CTRL','fill session archived to database 106 (speeds up next recognition)','info');
   }
+  phase='done'; setButtons();
 }
 
-async function handleAnomaly(bay,vec){
-  bay.anom=vec;G.anom++;
-  setBst(bay,'e','ANOMALY');
-  document.getElementById(`va-${bay.idx}`).classList.add('sh');
-  document.getElementById(`vs-${bay.idx}`).classList.remove('on');
-  document.getElementById(`vs-${bay.idx}`).style.height='0';
-  glog(`ANOMALY: ${vec.name}`,  'E',bay.id);
-
-  // SHOW DETECTION MECHANISM
-  await showDetection(bay, vec);
-
-  const choice=await showModal(
-    `Anomaly: ${vec.name}`,bay.id,
-    `${vec.detection.method}\n\nDetection confirmed across ${vec.detection.sensors.length} sensor(s): ${vec.detection.sensors.join(', ')}.\n\nBay ${bay.id} · ${bay.mat} → ${bay.cont}\nFill at anomaly: ${Math.round(bay.fill)}%`,
-    [{l:'Halt',v:'halt',c:'stop'},{l:'Override',v:'go',c:''}]
-  );
-
-  if(choice==='halt'){
-    setBst(bay,'e','HALTED');glog('Bay halted','E',bay.id);
-  } else {
-    G.overs++;glog('Override — resuming','W',bay.id);
-    setBst(bay,'w','OVERRIDE');
-    document.getElementById(`va-${bay.idx}`).classList.remove('sh');
-    document.getElementById(`vs-${bay.idx}`).classList.add('on');
-    document.getElementById(`vs-${bay.idx}`).style.height='80px';
-    await new Promise(res=>{
-      const iv=setInterval(()=>{
-        bay.fill=Math.min(bay.fill+rnd(0.5,1.5),100);
-        document.getElementById(`vl-${bay.idx}`).style.height=bay.fill+'%';
-        document.getElementById(`bf-${bay.idx}`).textContent=Math.round(bay.fill)+'%';
-        document.getElementById(`bp-${bay.idx}`).style.width=bay.fill+'%';
-        if(bay.fill>=bay.target){clearInterval(iv);res()}
-      },120);
-    });
-    document.getElementById(`vs-${bay.idx}`).classList.remove('on');
-    document.getElementById(`vs-${bay.idx}`).style.height='0';
-    setBst(bay,'o','COMPLETE');G.disp+=bay.vol*bay.fill/100;
+// decay chart animation (healthy always drawn; defect curve if crack)
+async function runDecay(hasDefect){
+  const good=$('curveGood'), bad=$('curveBad');
+  good.setAttribute('points',''); bad.setAttribute('points','');
+  $('lblGood').style.display='none'; $('lblBad').style.display='none';
+  // wall-clock driven so background-tab timer throttling can't stretch it
+  const dur=1500, tStart=Date.now();
+  let drawn=-1;
+  while(drawn<40){
+    const i=Math.min(40, Math.round((Date.now()-tStart)/dur*40));
+    if(i>drawn){
+      let gp=[], bp=[];
+      for(let k=0;k<=i;k++){
+        const x=26+k*(268/40);
+        const tG=90*Math.exp(-k/9), tB=90*Math.exp(-k/22);
+        gp.push(`${x},${100-tG*0.95}`); bp.push(`${x},${100-tB*0.95}`);
+      }
+      good.setAttribute('points',gp.join(' '));
+      if(hasDefect) bad.setAttribute('points',bp.join(' '));
+      $('frameN').textContent=Math.min(500,Math.round(i/40*480+12));
+      drawn=i;
+    }
+    await sleep(36);
   }
+  $('lblGood').style.display='block';
+  if(hasDefect) $('lblBad').style.display='block';
 }
 
-// =========================================================
-// METRICS + CLOCK
-// =========================================================
-function tick(){
-  if(!G.running)return;
-  document.getElementById('clk').textContent=`T+${((performance.now()-G.t0)/1000).toFixed(2)}s`;
-  document.getElementById('xDisp').textContent=G.disp>=1?G.disp.toFixed(1)+' L':(G.disp*1000).toFixed(0)+' ml';
-  document.getElementById('xAnom').textContent=G.anom;
-  const avg=G.bays.length?G.bays.reduce((a,b)=>a+b.fill,0)/G.bays.length:0;
-  document.getElementById('xFill').textContent=Math.round(avg)+'%';
-  G.fid=requestAnimationFrame(tick);
-}
+// ═══════════ SABOTAGE ═══════════
+function yank(){ if(phase!=='pouring') return; pourAbort='yank'; }
+function crackIt(){ if(phase!=='pouring') return; pourAbort='crack'; }
 
-async function launch(){
-  if(!G.sc){alert('Pick a scenario.');return}
-  if(G.running)return;
-  G.running=true;G.t0=performance.now();G.disp=0;G.anom=0;G.overs=0;
-  document.getElementById('goBtn').disabled=true;
-  document.getElementById('goBtn').textContent='Running...';
-  document.getElementById('detPanel').classList.remove('vis');
-  glog(`Scenario: ${G.sc.name} — ${G.sc.bays} bays`,'O');
-  tick();
-  await Promise.all(G.bays.map(b=>runBay(b)));
-  G.running=false;if(G.fid)cancelAnimationFrame(G.fid);
-  const t=((performance.now()-G.t0)/1000).toFixed(1);
-  glog(`Cycle done — ${G.bays.filter(b=>b.state==='complete').length}/${G.bays.length} OK in ${t}s`,'O');
-  document.getElementById('goBtn').disabled=false;
-  document.getElementById('goBtn').textContent='Run';
-}
-
-function resetAll(){
-  G.running=false;if(G.fid)cancelAnimationFrame(G.fid);
-  G.disp=0;G.anom=0;G.overs=0;G.forced=null;
-  document.getElementById('clk').textContent='T+0.00s';
-  document.getElementById('logBox').innerHTML='';
-  document.getElementById('detPanel').classList.remove('vis');
-  document.querySelectorAll('.vec').forEach(e=>e.classList.remove('forced'));
-  ['xDisp','xAnom'].forEach(id=>document.getElementById(id).textContent='0');
-  document.getElementById('xFill').textContent='0%';
-  document.getElementById('mbg').classList.remove('sh');
-  document.getElementById('goBtn').disabled=false;
-  document.getElementById('goBtn').textContent='Run';
-  if(G.sc)buildBays();
-}
-
-init();
+// init
+renderChips(); placeVessel(); resetHUD();
 </script>
 
-<!-- ===== RETRO NAV (added) ===== -->
+<!-- ===== RETRO NAV (site-wide) ===== -->
 <style>
 #retro-nav{
   position:fixed;left:12px;bottom:12px;z-index:2147483647;
@@ -778,38 +515,6 @@ init();
 }
 #retro-nav .rn-x:active{border-style:inset}
 @media(max-width:600px){#retro-nav{font-size:10px;left:6px;bottom:6px}}
-
-/* ===== MOBILE ===== */
-@media(max-width:820px){
-  html{font-size:13px}
-  body{-webkit-text-size-adjust:100%}
-
-  .top{height:auto;flex-wrap:wrap;gap:8px;padding:8px 14px}
-  .top .tag{font-size:.6rem;width:100%;order:3}
-  .top .rt{margin-left:auto;gap:8px}
-  .b{padding:8px 14px}
-
-  .scbar{padding:10px 14px;gap:8px}
-  .sc{padding:9px 12px;font-size:.72rem}
-
-  /* single column: main content then the side rail below it */
-  .layout{display:block;min-height:0}
-  .main,.side{max-height:none;overflow:visible;padding:14px}
-  .side{border-left:none;border-top:1px solid var(--bd)}
-
-  .bays{grid-template-columns:1fr;gap:10px}
-  .bb{grid-template-columns:80px 1fr;gap:12px}
-  .vessel{width:80px;height:125px}
-  .v-noz{left:28px}
-  .metrics-row{gap:8px}
-  .log-l .lt{min-width:42px}
-  .mdl{padding:18px 16px;width:94%}
-}
-@media(max-width:420px){
-  .bb{grid-template-columns:1fr;justify-items:center}
-  .vessel{margin:0 auto}
-  .metrics-row{grid-template-columns:1fr;gap:6px}
-}
 </style>
 <div id="retro-nav">
   <button class="rn-x" onclick="document.getElementById('retro-nav').style.display='none'" title="Close" aria-label="Close">x</button>
