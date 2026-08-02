@@ -1,163 +1,153 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Igor Monteiro Vieira</title>
-<meta name="description" content="Boring site. Interactive experiments by Igor Monteiro Vieira.">
-<meta name="keywords" content="experiments, container security, reinforcement learning, SCADA">
-<style>
-:root{
-  --paper:#EDE6D2;
-  --paper2:#E3DAC0;
-  --paper3:#F6F1E1;
-  --ink:#2B2519;
-  --ink2:#5C5238;
-  --rule:#B3A67F;
-  --link:#0000CC;
-  --visited:#551A8B;
-  --hot:#990000;
-  --olive:#4A5D23;
-}
-body{
-  background-color:var(--paper);
-  color:var(--ink);
-  font-family:"Times New Roman",Times,serif;
-  font-size:16px;
-  margin:0;
-  padding:12px 8px 30px 8px;
-}
-td,th{font-family:"Times New Roman",Times,serif}
-a{color:var(--link)}
-a:visited{color:var(--visited)}
-a:hover{color:var(--hot)}
-tt,code,.mono{font-family:"Courier New",Courier,monospace}
-
-.page{width:760px;margin:0 auto}
-
-/* ---- BANNER ---- */
-.banner{
-  border:3px outset var(--paper2);
-  background-color:var(--paper3);
-  padding:14px 10px 10px 10px;
-  text-align:center;
-}
-.banner h1{
-  font-size:34px;
-  margin:0 0 4px 0;
-  letter-spacing:1px;
-  color:var(--ink);
-  text-shadow:2px 2px 0 var(--paper2);
-}
-.banner .jp{
-  font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","MS PGothic","Noto Sans JP",sans-serif;
-  font-size:17px;
-  color:var(--ink2);
-  letter-spacing:3px;
-  margin-bottom:6px;
-}
-.banner .sub{
-  font-family:"Courier New",Courier,monospace;
-  font-size:12px;
-  color:var(--ink2);
-  letter-spacing:1px;
-}
-
-
-/* ---- NAV BAR ---- */
-.navbar{
-  border:2px outset var(--paper2);
-  background-color:var(--paper2);
-  padding:5px;
-  text-align:center;
-  font-family:"Courier New",Courier,monospace;
-  font-size:12px;
-  margin-bottom:10px;
-}
-.navbar a{margin:0 4px;text-decoration:none;font-weight:bold}
-.navbar a:hover{text-decoration:underline}
-
-/* ---- SECTION HEADS ---- */
-h2.sec{
-  background-color:var(--paper2);
-  border-top:2px solid var(--rule);
-  border-bottom:2px solid var(--rule);
-  font-size:17px;
-  margin:18px 0 10px 0;
-  padding:4px 8px;
-  letter-spacing:.5px;
-}
-
-/* ---- PATENT TABLE ---- */
-table.reg{
-  width:100%;
-  border:3px outset var(--paper2);
-  border-collapse:separate;
-  border-spacing:0;
-  background-color:var(--paper3);
-}
-table.reg th{
-  background-color:var(--paper2);
-  border-bottom:2px solid var(--rule);
-  font-family:"Courier New",Courier,monospace;
-  font-size:11px;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  text-align:left;
-  padding:5px 8px;
-}
-table.reg td{
-  border-bottom:1px dotted var(--rule);
-  padding:10px 8px;
-  vertical-align:top;
-  font-size:15px;
-}
-table.reg tr:last-child td{border-bottom:none}
-table.reg tr.alt td{background-color:#E9E1CB}
-.pnum{font-family:"Courier New",Courier,monospace;font-size:13px;font-weight:bold;white-space:nowrap}
-.pstat{font-family:"Courier New",Courier,monospace;font-size:11px;color:var(--ink2);letter-spacing:.5px}
-.ptitle{font-weight:bold}
-.pdesc{font-size:14px;color:var(--ink2);margin-top:3px}
-.psix{font-family:"Courier New",Courier,monospace;font-size:12px;color:var(--olive);letter-spacing:.3px;margin-top:4px}
-
-/* ---- INFO BOX ---- */
-.box{
-  border:2px inset var(--paper2);
-  background-color:var(--paper3);
-  padding:10px 12px;
-  font-size:15px;
-}
-.box p{margin:0 0 8px 0}
-.box p:last-child{margin-bottom:0}
-
-/* ---- FOOTER ---- */
-.footer{
-  margin-top:18px;
-  border-top:2px solid var(--rule);
-  padding-top:10px;
-  text-align:center;
-  font-family:"Courier New",Courier,monospace;
-  font-size:11px;
-  color:var(--ink2);
-  line-height:1.7;
-}
-
-hr.old{border:none;border-top:2px groove var(--rule);margin:14px 0}
-
-@media(max-width:800px){
-  .page{width:auto}
-  table.reg td{font-size:14px}
-  .banner h1{font-size:22px}
-}
-@media(max-width:480px){
-  body{padding:8px 6px 24px 6px}
-  .navbar{font-size:11px;line-height:2}
-  table.reg th,table.reg td{padding:8px 6px}
-  .pnum{font-size:12px}
-  .psix{font-size:11px}
-  .pdesc{font-size:13px}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Igor Monteiro Vieira</title>
+  <meta name="description" content="Boring site. Interactive experiments by Igor Monteiro Vieira.">
+  <meta name="keywords" content="experiments, container security, reinforcement learning, SCADA">
+  <style>
+    :root{
+      --paper:#EDE6D2;
+      --paper2:#E3DAC0;
+      --paper3:#F6F1E1;
+      --ink:#2B2519;
+      --ink2:#5C5238;
+      --rule:#B3A67F;
+      --link:#0000CC;
+      --visited:#551A8B;
+      --hot:#990000;
+      --olive:#4A5D23;
+    }
+    body{
+      background-color:var(--paper);
+      color:var(--ink);
+      font-family:"Times New Roman",Times,serif;
+      font-size:16px;
+      margin:0;
+      padding:12px 8px 30px 8px;
+    }
+    td,th{font-family:"Times New Roman",Times,serif}
+    a{color:var(--link)}
+    a:visited{color:var(--visited)}
+    a:hover{color:var(--hot)}
+    tt,code,.mono{font-family:"Courier New",Courier,monospace}
+    .page{width:760px;margin:0 auto}
+    /* ---- BANNER ---- */
+    .banner{
+      border:3px outset var(--paper2);
+      background-color:var(--paper3);
+      padding:14px 10px 10px 10px;
+      text-align:center;
+    }
+    .banner h1{
+      font-size:34px;
+      margin:0 0 4px 0;
+      letter-spacing:1px;
+      color:var(--ink);
+      text-shadow:2px 2px 0 var(--paper2);
+    }
+    .banner .jp{
+      font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","MS PGothic","Noto Sans JP",sans-serif;
+      font-size:17px;
+      color:var(--ink2);
+      letter-spacing:3px;
+      margin-bottom:6px;
+    }
+    .banner .sub{
+      font-family:"Courier New",Courier,monospace;
+      font-size:12px;
+      color:var(--ink2);
+      letter-spacing:1px;
+    }
+    /* ---- NAV BAR ---- */
+    .navbar{
+      border:2px outset var(--paper2);
+      background-color:var(--paper2);
+      padding:5px;
+      text-align:center;
+      font-family:"Courier New",Courier,monospace;
+      font-size:12px;
+      margin-bottom:10px;
+    }
+    .navbar a{margin:0 4px;text-decoration:none;font-weight:bold}
+    .navbar a:hover{text-decoration:underline}
+    /* ---- SECTION HEADS ---- */
+    h2.sec{
+      background-color:var(--paper2);
+      border-top:2px solid var(--rule);
+      border-bottom:2px solid var(--rule);
+      font-size:17px;
+      margin:18px 0 10px 0;
+      padding:4px 8px;
+      letter-spacing:.5px;
+    }
+    /* ---- PATENT TABLE ---- */
+    table.reg{
+      width:100%;
+      border:3px outset var(--paper2);
+      border-collapse:separate;
+      border-spacing:0;
+      background-color:var(--paper3);
+    }
+    table.reg th{
+      background-color:var(--paper2);
+      border-bottom:2px solid var(--rule);
+      font-family:"Courier New",Courier,monospace;
+      font-size:11px;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      text-align:left;
+      padding:5px 8px;
+    }
+    table.reg td{
+      border-bottom:1px dotted var(--rule);
+      padding:10px 8px;
+      vertical-align:top;
+      font-size:15px;
+    }
+    table.reg tr:last-child td{border-bottom:none}
+    table.reg tr.alt td{background-color:#E9E1CB}
+    .pnum{font-family:"Courier New",Courier,monospace;font-size:13px;font-weight:bold;white-space:nowrap}
+    .pstat{font-family:"Courier New",Courier,monospace;font-size:11px;color:var(--ink2);letter-spacing:.5px}
+    .ptitle{font-weight:bold}
+    .pdesc{font-size:14px;color:var(--ink2);margin-top:3px}
+    .psix{font-family:"Courier New",Courier,monospace;font-size:12px;color:var(--olive);letter-spacing:.3px;margin-top:4px}
+    /* ---- INFO BOX ---- */
+    .box{
+      border:2px inset var(--paper2);
+      background-color:var(--paper3);
+      padding:10px 12px;
+      font-size:15px;
+    }
+    .box p{margin:0 0 8px 0}
+    .box p:last-child{margin-bottom:0}
+    /* ---- FOOTER ---- */
+    .footer{
+      margin-top:18px;
+      border-top:2px solid var(--rule);
+      padding-top:10px;
+      text-align:center;
+      font-family:"Courier New",Courier,monospace;
+      font-size:11px;
+      color:var(--ink2);
+      line-height:1.7;
+    }
+    hr.old{border:none;border-top:2px groove var(--rule);margin:14px 0}
+    @media(max-width:800px){
+      .page{width:auto}
+      table.reg td{font-size:14px}
+      .banner h1{font-size:22px}
+    }
+    @media(max-width:480px){
+      body{padding:8px 6px 24px 6px}
+      .navbar{font-size:11px;line-height:2}
+      table.reg th,table.reg td{padding:8px 6px}
+      .pnum{font-size:12px}
+      .psix{font-size:11px}
+      .pdesc{font-size:13px}
+    }
+  </style>
 </head>
 <body>
 <div class="page">
@@ -169,84 +159,70 @@ hr.old{border:none;border-top:2px groove var(--rule);margin:14px 0}
     <div class="sub">Boring site. My Researches and patents. </div>
   </div>
 
-
   <!-- NAV -->
   <div class="navbar">
     [ <a href="index.html">HOME</a> ]
-    [ <a href="#patents">RESEARCHES</a> ]
+    [ <a href="#patents">PATENTS</a> ]
     [ <a href="#work">WORK</a> ]
     [ <a href="#about">ABOUT</a> ]
-    [ <a href="irc.html">CHAT</a> ]
+    [ <a href="https://imv7.github.io/igor/" target="_blank" rel="noopener">THERAPIES</a> ]
     [ <a href="https://github.com/imv7" target="_blank" rel="noopener">GITHUB</a> ]
   </div>
 
-  <div class="box">
-    <p><a href="irc.html">IRC room</a>, if anyone is around.</p>
-  </div>
-
   <!-- PATENTS -->
-  <h2 class="sec" id="patents">Researches</h2>
-
+  <h2 class="sec" id="patents">Patents</h2>
   <table class="reg">
     <tr>
       <th width="160">Number &rarr; record</th>
       <th>Experiment &rarr; demo</th>
       <th width="90">Status</th>
     </tr>
-
     <tr>
       <td class="pnum"><a href="https://patents.google.com/patent/US12112155B2/en" target="_blank" rel="noopener">US 12,112,155 B2</a></td>
       <td>
         <div class="ptitle"><a href="container-security-engine.html">Container Border Control &mdash; ML Scoring Engine</a></div>
         <div class="psix">Scores container images, picks safest cloud.</div>
-        <div class="pdesc">Containers as passengers, Dockerfiles as passports: the patent&rsquo;s monotonicity checks score each image and decide which cloud &mdash; if any &mdash; may host it.</div>
+
       </td>
       <td class="pstat">Granted</td>
     </tr>
-
     <tr class="alt">
       <td class="pnum"><a href="https://patents.google.com/patent/US11290772B2/en" target="_blank" rel="noopener">US 11,290,772 B2</a></td>
       <td>
         <div class="ptitle"><a href="dmse_simulation.html">One Screen, Many Worlds &mdash; DMSE</a></div>
         <div class="psix">One display, many viewers, different content.</div>
-        <div class="pdesc">A living room where every viewer watches something different on the same TV &mdash; borrow anyone&rsquo;s glasses to see their private, frequency-tuned stream.</div>
+
       </td>
       <td class="pstat">Granted</td>
     </tr>
-
     <tr>
       <td class="pnum"><a href="https://patents.google.com/patent/US11117794B2/en" target="_blank" rel="noopener">US 11,117,794 B2</a></td>
       <td>
         <div class="ptitle"><a href="pourcontrol-detection.html">The Machine That Refuses to Spill &mdash; PourControl</a></div>
         <div class="psix">Sensors catch faults while machines pour.</div>
-        <div class="pdesc">Bring your own container: the dispenser 3D-scans it with infrared dots, finds hidden cracks with a thermal pulse, and shuts the valve when you sabotage the pour.</div>
+
       </td>
       <td class="pstat">Granted</td>
     </tr>
-
     <tr class="alt">
       <td class="pnum"><a href="https://patents.google.com/patent/US20220188213A1/en" target="_blank" rel="noopener">US 2022/0188213 A1</a></td>
       <td>
         <div class="ptitle"><a href="noc-visual.html">Script Grand Prix &mdash; RL Selector</a></div>
         <div class="psix">Reinforcement learning picks best remediation script.</div>
-        <div class="pdesc">Candidate fix-scripts race through the patent&rsquo;s 7-state reward machine in a cloned production arena &mdash; fewest penalty points takes the podium and gets deployed.</div>
+
       </td>
       <td class="pstat">Published</td>
     </tr>
-
   </table>
 
-  <!-- ABOUT -->
   <!-- WORK HISTORY -->
   <h2 class="sec" id="work">Work history</h2>
-
   <table class="reg">
     <tr>
       <th width="140">Period</th>
       <th>Organisation</th>
       <th width="240">Role</th>
     </tr>
-
     <tr>
       <td class="pnum">2021 &ndash; now</td>
       <td class="ptitle">Kyndryl</td>
@@ -280,7 +256,6 @@ hr.old{border:none;border-top:2px groove var(--rule);margin:14px 0}
   </table>
 
   <h2 class="sec" id="about">About</h2>
-
   <div class="box">
     <p>As Internal Auditor to the Kyndryl General Audit Organization, I am responsible for performing additional reviews and assessments of Company cybersecurity controls and procedures, and report to the Senior Leadership who reports to the Audit Committee and the Board of Directors as appropriate. I use the findings from these efforts to improve Company practices, procedures and technologies. Certified Information Systems Auditor (CISA) and TOGAF.</p>
     <p>Find me at igormonteirovieira [at] gmail.com.</p>
@@ -290,6 +265,11 @@ hr.old{border:none;border-top:2px groove var(--rule);margin:14px 0}
 
   <!-- FOOTER -->
   <div class="footer">
+    Brazilian and Italian national, Thai resident.<br>
+    Experience across Argentina, Brazil, Canada, Chile, Denmark,
+    France, Germany, Hungary, India, Indonesia, Ireland, Italy,
+    Japan, Malaysia, Mexico, Peru, Philippines, Poland, Slovakia,
+    South Korea, Spain, Thailand, United Kingdom, and Vietnam.<br><br>
     &copy; 1998 web style :)
   </div>
 
