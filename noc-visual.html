@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>US 2022/0188213 A1 — Script Grand Prix</title>
+<title>US 2022/0188213 A1 — Autonomous Remediation Script Selection</title>
 <meta name="description" content="Interactive demo of US 2022/0188213 A1 — Selecting automation scripts using reinforced learning. Candidate scripts race through a state machine; fewest penalty points wins deployment.">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -159,6 +159,18 @@ footer{margin-top:40px;text-align:center;font-family:var(--mono);font-size:11px;
 footer a{color:var(--blue);text-decoration:none}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--s3);border:1px solid var(--bd2);color:var(--t1);font-family:var(--mono);font-size:12px;padding:10px 18px;border-radius:8px;transition:transform .3s;z-index:500;max-width:92vw;text-align:center}
 #toast.show{transform:translateX(-50%) translateY(0)}
+.sampler-note{font-size:12px;color:var(--t3);background:rgba(255,255,255,.03);border:1px solid var(--bd);border-left:3px solid var(--green);border-radius:8px;padding:9px 12px;margin-bottom:12px;line-height:1.7}
+.sampler-note b{color:var(--t1)}
+.sampler-note #spaceSize{color:var(--green);font-family:var(--mono)}
+.seedtag{font-family:var(--mono);font-size:10px;color:var(--t3);float:right;margin-left:8px}
+.prob.fresh{animation:mint .5s ease}
+@keyframes mint{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.tally{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11px}
+.tally .tc{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:7px;padding:6px 10px;color:var(--t2)}
+.tally .tc b{color:var(--t1);font-size:13px}
+.btn.stopping{background:#ff5470;border-color:#ff5470;color:#fff}
+.autopulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:#2fe08c;margin-right:6px;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 </style>
 </head>
 <body>
@@ -166,21 +178,28 @@ footer a{color:var(--blue);text-decoration:none}
 
 <header>
   <div class="kicker">Interactive patent demo</div>
-  <h1>Script <span class="flag">Grand&nbsp;Prix</span> 🏁</h1>
+  <h1>Autonomous <span class="flag">Script&nbsp;Selection</span> 🏁</h1>
   <div class="patent-tag"><a href="https://patents.google.com/patent/US20220188213A1/en" target="_blank" rel="noopener">US 2022/0188213 A1</a> · Selecting Automation Scripts Using Reinforced Learning · Kyndryl · Manhaes, Das Neves, Varga, Monteiro Vieira, Todari</div>
-  <p class="lede">An incident fires. Four candidate fix-scripts think they can handle it. Instead of trusting one, the patent <b>races them all</b> — in a cloned replica of production, through a 7-state machine where every move costs <b>penalty points</b>. Waiting? −2. Crash? −3. Fail to fix it? <b>−9</b>. Closest to zero takes the podium and gets deployed for real.</p>
+  <p class="lede">An incident fires and the system fixes it <b>without waking anyone</b>. Candidate scripts are scouted, raced against each other in a cloned replica of production, and the winner is deployed straight to real production. There is no approval step, no ticket, no operator in the path. Every move costs <b>penalty points</b>: waiting −2, crashing −3, failing to fix it <b>−9</b>. Closest to zero wins and ships.<br><br><b>Nothing here is scripted in advance.</b> Each incident is synthesised on the spot from a fault class, a host, a blast radius and four independently drawn candidate behaviours. Press <b>AUTOPILOT</b> and incidents keep arriving, one after another, with no gap and no clicks.</p>
   <div class="checker"></div>
 </header>
 
 <!-- 1 · INCIDENT -->
 <section>
-  <div class="sec-h"><span class="num">1</span><h2>The incident — pick a problem statement</h2><span class="sub">problem criteria · FIG. 1 (102)</span></div>
+  <div class="sec-h"><span class="num">1</span><h2>Incident feed</h2><span class="sub">synthesised problem statements · FIG. 1 (102)</span></div>
   <div class="sec-b">
+    <div class="sampler-note">
+      <b>Procedural sampler.</b> Fault class × host × blast radius × four candidate behaviours, drawn independently. The space is <b id="spaceSize">—</b> distinct incidents; these three were minted <span id="mintAge">just now</span>.
+      <span class="seedtag">seed <b id="seedVal">—</b></span>
+    </div>
     <div class="probs" id="probs"></div>
     <div class="runbar">
-      <button class="btn primary" id="runBtn" onclick="runAll()">🏁 SCOUT &amp; RACE</button>
-      <span class="hint" id="runHint">Pick an incident, then let the engine find and race the candidates.</span>
+      <button class="btn primary" id="autoBtn" onclick="autopilot()">▶ AUTOPILOT — RUN UNATTENDED</button>
+      <button class="btn" id="runBtn" onclick="runAll()">▷ HANDLE ONE INCIDENT</button>
+      <button class="btn" id="regenBtn" onclick="regenFeed(true)">↻ RESAMPLE FEED</button>
+      <span class="hint" id="runHint">Autopilot needs no selection. It takes whatever the feed emits.</span>
     </div>
+    <div class="tally" id="tally"></div>
   </div>
 </section>
 
@@ -269,78 +288,196 @@ const STATES={R:'READY',N:'RUNNING',W:'WAITING',C:'COMPLETED',T:'TERMINATED',S:'
 // track x-positions (%) for the runner per state
 const POS={R:3, N:26, W:44, C:66, T:66, S:94, F:94};
 
-const PROBLEMS={
- disk:{
-  title:'INC-4021 · Prod DB disk 96% full', sev:'crit',
-  desc:'/var partition on db-prod-03 nearly full; writes will stall.',
+// ═══════════════════════════════════════════════════════════
+// PROCEDURAL INCIDENT SAMPLER
+// The patent is meant to run without an operator, so a fixed set of
+// three demo incidents would misrepresent it. Every problem statement
+// below is synthesised from independent draws: fault class, host, blast
+// radius, and four candidate behaviours pulled from a pool of state-machine
+// archetypes. The winner is therefore not predetermined.
+// ═══════════════════════════════════════════════════════════
+let SEED=(Date.now()^(Math.random()*1e9))>>>0;
+function rnd(){ SEED^=SEED<<13; SEED>>>=0; SEED^=SEED>>17; SEED^=SEED<<5; SEED>>>=0; return SEED/4294967296; }
+const one=a=>a[Math.floor(rnd()*a.length)];
+const intg=(lo,hi)=>lo+Math.floor(rnd()*(hi-lo+1));
+const odds=p=>rnd()<p;
+
+const HOSTS=['db-prod','app-node','edge-lb','cache-ring','queue-broker','api-gw','batch-worker','search-idx','auth-svc','ledger-db'];
+const REGIONS=['eu-central','sa-east','us-east','ap-south','eu-west'];
+
+// Behaviour archetypes for the 7-state machine (FIG. 5).
+// Each is a path through READY→…→SUCCEEDED/FAILED with its reward stream.
+const ARCHETYPES=[
+ {id:'clean',   w:'fixed it on the first pass',                 path:[['N',-1],['C',-1],['S',-1]]},
+ {id:'hesitant',w:'fixed it, but paused on a lock',             path:[['N',-1],['W',-2],['N',-1],['C',-1],['S',-1]]},
+ {id:'thrash',  w:'fixed it after repeated blocking',           path:[['N',-1],['W',-2],['N',-1],['W',-3],['N',-1],['C',-1],['S',-1]]},
+ {id:'ruled',   w:'terminated by race control', rule:true,      path:[['N',-1],['W',-2],['T',-3],['F',-9]]},
+ {id:'ruled2',  w:'terminated by race control', rule:true,      path:[['N',-1],['T',-3],['F',-9]]},
+ {id:'stall',   w:'waited past the execution limit', rule:true, path:[['N',-1],['W',-2],['W',-3],['W',-4],['T',-3],['F',-9]]},
+ {id:'false',   w:'ran cleanly, problem still there',           path:[['N',-1],['C',-1],['F',-9]]},
+ {id:'falsew',  w:'slow, and it did not actually fix anything', path:[['N',-1],['W',-2],['C',-1],['F',-9]]},
+];
+const GOOD=['clean','hesitant','thrash'], BAD=['ruled','ruled2','stall','false','falsew'];
+const arch=id=>ARCHETYPES.find(a=>a.id===id);
+
+const ORIGINS_GOOD=['knowledge base · ops-repo','knowledge base · infra','runbook v2','runbook v3','knowledge base · sre-playbooks'];
+const ORIGINS_BAD=['stack-overflow #'+0,'forum snippet · unranked','pastebin mirror','stack-overflow · unranked'];
+const soOrigin=()=>odds(.5)?'stack-overflow #'+intg(10000,99999):one(['forum snippet · unranked','pastebin mirror · unranked','wiki draft · unranked']);
+
+// Fault classes. Each carries the script the pit crew rewrites, with the
+// unsafe command and the mapping-DB replacement.
+const CLASSES=[
+ {k:'disk', sev:['crit','high'], t:h0=>`${h0} · /var partition ${intg(91,99)}% full`,
+  d:h0=>`Writes on ${h0} will stall within minutes; log rotation is behind.`,
   kws:['disk','full','purge','logs','/var'],
-  opt:{script:'purge_rotated_logs.sh',
-    lines:[
-      {t:'#!/bin/bash'},
-      {t:'df -h /var | tail -1'},
-      {t:'rm -rf /var/log/*.gz', bad:'rm -rf /var/log/*.gz', good:"find /var/log -name '*.gz' -mtime +7 -delete"},
-      {t:'systemctl kill rsyslog', bad:'systemctl kill rsyslog', good:'systemctl restart rsyslog'},
-      {t:'df -h /var | tail -1'},
-    ],
-    note:`Command mapping DB 440: <b>rm -rf glob</b> <span class="arrow">→</span> <b>find … -mtime +7 -delete</b> (age-scoped, no shell-glob blowup) · <b>systemctl kill</b> <span class="arrow">→</span> <b>restart</b> (graceful). The knowledge base ranks these as best-practice replacements; dependent lines adjusted automatically.`},
-  cands:[
-   {id:'a', icon:'🧹', name:'purge_rotated_logs.sh', origin:'knowledge base · ops-repo', sim:94, color:'#2fe08c',
-    path:[['N',-1],['C',-1],['S',-1]], verdict:'fixed the problem'},
-   {id:'b', icon:'📦', name:'compress_and_move.sh', origin:'stack-overflow #48211', sim:87, color:'#4da3ff',
-    path:[['N',-1],['W',-2],['N',-1],['W',-3],['N',-1],['C',-1],['S',-1]], verdict:'fixed it, but kept blocking on I/O'},
-   {id:'c', icon:'💽', name:'expand_disk_lvm.sh', origin:'knowledge base · infra', sim:81, color:'#a98cff',
-    path:[['N',-1],['W',-2],['T',-3],['F',-9]], rule:'wait > 5 s — execution rule violated', verdict:'terminated by race control'},
-   {id:'d', icon:'🔁', name:'restart_db_service.sh', origin:'forum snippet · unranked', sim:66, color:'#ff7ab8',
-    path:[['N',-1],['C',-1],['F',-9]], verdict:'ran fine — disk still 96%'},
-  ]},
- cpu:{
-  title:'INC-4022 · Zombie processes eating CPU', sev:'high',
-  desc:'app-node-11 load 38; hundreds of defunct workers.',
+  script:'purge_rotated_logs.sh',
+  lines:[{t:'#!/bin/bash'},{t:'df -h /var | tail -1'},
+   {t:'rm -rf /var/log/*.gz', bad:'rm -rf /var/log/*.gz', good:"find /var/log -name '*.gz' -mtime +7 -delete"},
+   {t:'systemctl kill rsyslog', bad:'systemctl kill rsyslog', good:'systemctl restart rsyslog'},
+   {t:'df -h /var | tail -1'}],
+  note:'Command mapping DB 440: <b>rm -rf glob</b> <span class="arrow">→</span> <b>find … -mtime +7 -delete</b> (age-scoped, no glob blowup) · <b>systemctl kill</b> <span class="arrow">→</span> <b>restart</b> (graceful).',
+  pool:[['🧹','purge_rotated_logs.sh'],['📦','compress_and_move.sh'],['💽','expand_disk_lvm.sh'],['🔁','restart_service.sh'],['🗜','truncate_active_logs.sh']]},
+
+ {k:'zombie', sev:['high','crit'], t:h0=>`${h0} · load ${intg(22,48)}, ${intg(120,900)} defunct workers`,
+  d:h0=>`Zombie processes accumulating on ${h0}; scheduler starving real work.`,
   kws:['zombie','cpu','defunct','reap'],
-  opt:{script:'reap_zombies.sh',
-    lines:[
-      {t:'#!/bin/bash'},
-      {t:'ps -eo stat,pid | awk \x27$1~"Z"\x27'},
-      {t:'kill -9 $(pgrep -P 1)', bad:'kill -9 $(pgrep -P 1)', good:'kill -s SIGCHLD $(ps -o ppid= -C defunct | sort -u)'},
-      {t:'uptime'},
-    ],
-    note:`Command mapping DB 440: <b>kill -9 on PID-1 children</b> <span class="arrow">→</span> <b>SIGCHLD to the real parents</b> — zombies can't be killed, their parents must reap them. Knowledge base 444 ranks the signal-the-parent pattern highest.`},
-  cands:[
-   {id:'a', icon:'🪦', name:'reap_zombies.sh', origin:'knowledge base · ops-repo', sim:92, color:'#2fe08c',
-    path:[['N',-1],['W',-2],['N',-1],['C',-1],['S',-1]], verdict:'parents signalled, zombies reaped'},
-   {id:'b', icon:'🔄', name:'restart_worker_pool.sh', origin:'runbook v2', sim:88, color:'#4da3ff',
-    path:[['N',-1],['C',-1],['S',-1]], verdict:'pool bounced cleanly'},
-   {id:'c', icon:'🔪', name:'kill_dash_nine_all.sh', origin:'forum snippet · unranked', sim:74, color:'#a98cff',
-    path:[['N',-1],['T',-3],['F',-9]], rule:'touched PID 1 — execution rule violated', verdict:'terminated by race control'},
-   {id:'d', icon:'📈', name:'raise_cpu_limits.sh', origin:'stack-overflow #9917', sim:61, color:'#ff7ab8',
-    path:[['N',-1],['W',-2],['C',-1],['F',-9]], verdict:'limits raised — zombies remain'},
-  ]},
- cert:{
-  title:'INC-4023 · TLS cert expires in 4 h', sev:'crit',
-  desc:'edge-lb certificate for api.example.com near expiry.',
+  script:'reap_zombies.sh',
+  lines:[{t:'#!/bin/bash'},{t:'ps -eo stat,pid | awk \x27$1~"Z"\x27'},
+   {t:'kill -9 $(pgrep -P 1)', bad:'kill -9 $(pgrep -P 1)', good:'kill -s SIGCHLD $(ps -o ppid= -C defunct | sort -u)'},
+   {t:'uptime'}],
+  note:'Command mapping DB 440: <b>kill -9 on PID-1 children</b> <span class="arrow">→</span> <b>SIGCHLD to the real parents</b> — zombies cannot be killed, their parents must reap them.',
+  pool:[['🪦','reap_zombies.sh'],['🔄','restart_worker_pool.sh'],['🔪','kill_dash_nine_all.sh'],['📈','raise_cpu_limits.sh'],['🧬','respawn_supervisor.sh']]},
+
+ {k:'cert', sev:['crit'], t:h0=>`${h0} · TLS certificate expires in ${intg(2,9)} h`,
+  d:h0=>`Edge certificate on ${h0} near expiry; renewal job last succeeded ${intg(40,120)} days ago.`,
   kws:['tls','cert','renew','expiry'],
-  opt:{script:'renew_and_reload.sh',
-    lines:[
-      {t:'#!/bin/bash'},
-      {t:'certbot renew --force-renewal', bad:'certbot renew --force-renewal', good:'certbot renew --cert-name api.example.com'},
-      {t:'service nginx restart', bad:'service nginx restart', good:'nginx -s reload'},
-      {t:'openssl s_client -connect api:443 | openssl x509 -enddate'},
-    ],
-    note:`Command mapping DB 440: <b>--force-renewal on everything</b> <span class="arrow">→</span> <b>scoped --cert-name</b> (rate-limit safe) · <b>hard restart</b> <span class="arrow">→</span> <b>hot reload</b> (zero dropped connections).`},
-  cands:[
-   {id:'a', icon:'🔐', name:'renew_and_reload.sh', origin:'knowledge base · ops-repo', sim:95, color:'#2fe08c',
-    path:[['N',-1],['W',-2],['N',-1],['C',-1],['S',-1]], verdict:'renewed, hot-reloaded, verified'},
-   {id:'b', icon:'📜', name:'swap_from_backup_ca.sh', origin:'runbook v1', sim:83, color:'#4da3ff',
-    path:[['N',-1],['C',-1],['S',-1]], verdict:'backup cert deployed'},
-   {id:'c', icon:'⏳', name:'wait_for_dns_acme.sh', origin:'stack-overflow #55102', sim:78, color:'#a98cff',
-    path:[['N',-1],['W',-2],['W',-3],['W',-4],['T',-3],['F',-9]], rule:'total wait > 30 s — execution rule violated', verdict:'dynamic wait penalties escalated, then cut'},
-   {id:'d', icon:'🙈', name:'disable_tls_check.sh', origin:'forum snippet · unranked', sim:52, color:'#ff7ab8',
-    path:[['N',-1],['C',-1],['F',-9]], verdict:'“fixed” by hiding the problem — criteria unmet'},
-  ]},
-};
+  script:'renew_and_reload.sh',
+  lines:[{t:'#!/bin/bash'},
+   {t:'certbot renew --force-renewal', bad:'certbot renew --force-renewal', good:'certbot renew --cert-name api.internal'},
+   {t:'service nginx restart', bad:'service nginx restart', good:'nginx -s reload'},
+   {t:'openssl s_client -connect api:443 | openssl x509 -enddate'}],
+  note:'Command mapping DB 440: <b>--force-renewal on everything</b> <span class="arrow">→</span> <b>scoped --cert-name</b> (rate-limit safe) · <b>hard restart</b> <span class="arrow">→</span> <b>hot reload</b> (zero dropped connections).',
+  pool:[['🔐','renew_and_reload.sh'],['📜','swap_from_backup_ca.sh'],['⏳','wait_for_dns_acme.sh'],['🙈','disable_tls_check.sh'],['🔏','rotate_via_vault.sh']]},
+
+ {k:'pool', sev:['high','crit'], t:h0=>`${h0} · connection pool exhausted (${intg(180,400)}/${intg(200,400)})`,
+  d:h0=>`Every checkout on ${h0} is queueing; upstream latency past the error budget.`,
+  kws:['pool','connections','exhausted','timeout'],
+  script:'drain_idle_connections.sh',
+  lines:[{t:'#!/bin/bash'},{t:'ss -tan state established | wc -l'},
+   {t:'pkill -f connection-manager', bad:'pkill -f connection-manager', good:'systemctl reload connection-manager'},
+   {t:'psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity"', bad:'SELECT pg_terminate_backend(pid) FROM pg_stat_activity', good:"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state='idle' AND state_change < now()-interval '10 min'"}],
+  note:'Command mapping DB 440: <b>pkill -f</b> <span class="arrow">→</span> <b>systemctl reload</b> (no orphaned sockets) · <b>terminate every backend</b> <span class="arrow">→</span> <b>predicate-scoped termination</b> (idle only, older than 10 minutes).',
+  pool:[['🚰','drain_idle_connections.sh'],['📊','raise_pool_ceiling.sh'],['🔌','bounce_pgbouncer.sh'],['💣','kill_all_sessions.sh'],['🧊','shed_load_at_edge.sh']]},
+
+ {k:'memory', sev:['high','crit'], t:h0=>`${h0} · OOM killer fired ${intg(3,17)} times in ${intg(5,30)} min`,
+  d:h0=>`Resident memory on ${h0} climbing ${intg(40,300)} MB/min; restarts are masking a leak.`,
+  kws:['memory','oom','leak','rss'],
+  script:'recycle_leaking_workers.sh',
+  lines:[{t:'#!/bin/bash'},{t:'ps -eo rss,cmd --sort=-rss | head -5'},
+   {t:'echo 3 > /proc/sys/vm/drop_caches', bad:'echo 3 > /proc/sys/vm/drop_caches', good:'systemctl reload-or-restart app-worker@{1..4}'},
+   {t:'free -m'}],
+  note:'Command mapping DB 440: <b>dropping the page cache</b> <span class="arrow">→</span> <b>rolling worker recycle</b> — clearing caches hides the symptom and costs read throughput; recycling the leaking unit reclaims the memory.',
+  pool:[['♻️','recycle_leaking_workers.sh'],['🧯','drop_caches_now.sh'],['📉','lower_heap_ceiling.sh'],['🔃','rolling_restart_pool.sh'],['🩹','bump_memory_limit.sh']]},
+
+ {k:'replica', sev:['high'], t:h0=>`${h0} · replication lag ${intg(40,600)} s and rising`,
+  d:h0=>`Standby for ${h0} falling behind; failover would lose committed writes.`,
+  kws:['replication','lag','standby','wal'],
+  script:'clear_replication_backlog.sh',
+  lines:[{t:'#!/bin/bash'},{t:'psql -c "SELECT now()-pg_last_xact_replay_timestamp()"'},
+   {t:'pg_ctl promote -D /data', bad:'pg_ctl promote -D /data', good:'pg_wal_replay_resume()'},
+   {t:'systemctl restart walreceiver'}],
+  note:'Command mapping DB 440: <b>promote the standby</b> <span class="arrow">→</span> <b>resume WAL replay</b> — promotion is irreversible and splits the timeline; resuming replay clears the backlog without a failover.',
+  pool:[['🔗','clear_replication_backlog.sh'],['⏫','promote_standby.sh'],['🧵','restart_wal_receiver.sh'],['🪢','rebuild_replica_from_base.sh'],['⏸','pause_writes_briefly.sh']]},
+
+ {k:'dns', sev:['crit','high'], t:h0=>`${h0} · ${intg(12,60)}% of DNS lookups failing`,
+  d:h0=>`Resolver on ${h0} returning SERVFAIL; service discovery degrading across the mesh.`,
+  kws:['dns','resolver','servfail','discovery'],
+  script:'reset_resolver_cache.sh',
+  lines:[{t:'#!/bin/bash'},{t:'dig +short @127.0.0.1 svc.internal'},
+   {t:'echo "nameserver 8.8.8.8" > /etc/resolv.conf', bad:'echo "nameserver 8.8.8.8" > /etc/resolv.conf', good:'resolvectl flush-caches && systemctl restart systemd-resolved'},
+   {t:'dig +short @127.0.0.1 svc.internal'}],
+  note:'Command mapping DB 440: <b>overwriting resolv.conf with a public resolver</b> <span class="arrow">→</span> <b>flush and restart the local resolver</b> — repointing at a public resolver breaks internal names and leaks queries off-network.',
+  pool:[['🧭','reset_resolver_cache.sh'],['🌐','repoint_public_dns.sh'],['🔁','restart_coredns_pods.sh'],['📮','rehydrate_service_registry.sh'],['🕳','bypass_dns_with_hosts.sh']]},
+
+ {k:'queue', sev:['high','crit'], t:h0=>`${h0} · ${intg(40,900)}k messages backed up`,
+  d:h0=>`Consumers on ${h0} lagging; the dead-letter queue is growing ${intg(2,20)}× faster than normal.`,
+  kws:['queue','backlog','consumer','dlq'],
+  script:'scale_consumers_and_drain.sh',
+  lines:[{t:'#!/bin/bash'},{t:'rabbitmqctl list_queues name messages consumers'},
+   {t:'rabbitmqctl purge_queue orders', bad:'rabbitmqctl purge_queue orders', good:'kubectl scale deploy/orders-consumer --replicas=8'},
+   {t:'rabbitmqctl list_queues name messages'}],
+  note:'Command mapping DB 440: <b>purging the queue</b> <span class="arrow">→</span> <b>scaling the consumer group</b> — purging destroys unprocessed business events; scaling drains the same backlog without data loss.',
+  pool:[['📬','scale_consumers_and_drain.sh'],['🗑','purge_backlog.sh'],['🔀','reroute_to_secondary.sh'],['⚙️','restart_consumer_group.sh'],['🧺','replay_dead_letters.sh']]},
+];
+
+const SPACE_SIZE = (CLASSES.length * HOSTS.length * REGIONS.length * 5 * ARCHETYPES.length**2 * 100).toLocaleString('en-GB');
+
+let PROBLEMS = {};
+let mintedAt = Date.now();
+
+function synthIncident(n){
+ const cl=one(CLASSES);
+ const host=`${one(HOSTS)}-${String(intg(1,24)).padStart(2,'0')}.${one(REGIONS)}`;
+ const pool=[...cl.pool];
+ const cands=[];
+ const colors=['#2fe08c','#4da3ff','#a98cff','#ff7ab8'];
+
+ // The knowledge-base entry is favoured but not guaranteed: the whole point
+ // of the reward machine is that provenance does not decide the outcome.
+ const kbWins = odds(.6);
+ for(let i=0;i<4;i++){
+   const [icon,name]=pool.splice(Math.floor(rnd()*pool.length),1)[0];
+   const trusted = i===0;
+   let a;
+   if(i===0) a=arch(kbWins?one(GOOD):one(BAD));
+   else if(i===1) a=arch(odds(.55)?one(GOOD):one(BAD));
+   else a=arch(odds(.30)?one(GOOD):one(BAD));
+   cands.push({
+     id:'abcd'[i], icon, name,
+     origin: trusted||odds(.4) ? one(ORIGINS_GOOD) : soOrigin(),
+     sim: trusted ? intg(88,97) : intg(48,90),
+     color: colors[i],
+     path: a.path,
+     rule: a.rule ? one(['wait > 5 s — execution rule violated','touched a protected PID — execution rule violated','total wait > 30 s — execution rule violated','wrote outside the sandbox — execution rule violated']) : undefined,
+     verdict: a.w
+   });
+ }
+ cands.sort((x,y)=>y.sim-x.sim);
+ cands.forEach((c,i)=>{ c.id='abcd'[i]; c.color=colors[i]; });
+
+ return {
+  title:`INC-${intg(4000,9999)} · ${cl.t(host.split('.')[0])}`,
+  sev:one(cl.sev),
+  desc:cl.d(host),
+  kws:cl.kws,
+  opt:{script:cl.script, lines:cl.lines, note:cl.note},
+  cands
+ };
+}
+
+function regenFeed(announce){
+ if(running) return;
+ PROBLEMS={ i1:synthIncident(1), i2:synthIncident(2), i3:synthIncident(3) };
+ mintedAt=Date.now();
+ sel='i1';
+  document.querySelectorAll('.prob').forEach(e=>e.classList.add('fresh'));
+ if($('seedVal')) $('seedVal').textContent='0x'+SEED.toString(16).padStart(8,'0');
+ if($('spaceSize')) $('spaceSize').textContent=SPACE_SIZE;
+ if($('mintAge')) $('mintAge').textContent='just now';
+ if(announce) log('FEED','monitoring 102 raised three new problem statements','info');
+}
+
+const TALLY={handled:0, kb:0, outsider:0, refused:0};
+function renderTally(){
+ const t=$('tally'); if(!t) return;
+ t.innerHTML=`<div class="tc">incidents closed <b>${TALLY.handled}</b></div>`
+  +`<div class="tc">knowledge-base script won <b>${TALLY.kb}</b></div>`
+  +`<div class="tc">outsider script won <b>${TALLY.outsider}</b></div>`
+  +`<div class="tc">no script qualified <b>${TALLY.refused}</b></div>`;
+}
 
 // ═══════════ STATE ═══════════
-let sel='disk', running=false;
+let sel='i1', running=false, auto=false, autoCount=0;
 const $=id=>document.getElementById(id);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -362,7 +499,7 @@ function renderProbs(){
      <div class="pk">${p.kws.map(k2=>`<span class="kw">${k2}</span>`).join('')}</div>
    </div>`).join('');
 }
-function pickProb(k){ if(running) return; sel=k; renderProbs(); $('runHint').textContent=PROBLEMS[k].title+' selected — ready to race.'; }
+function pickProb(k){ if(running||!PROBLEMS[k]) return; sel=k; renderProbs(); if(!auto) $('runHint').textContent=PROBLEMS[k].title+' queued.'; }
 
 function laneHTML(c){
   return `<div class="lane" id="lane-${c.id}" style="border-left:3px solid ${c.color}">
@@ -381,7 +518,7 @@ function laneHTML(c){
 
 // ═══════════ MAIN FLOW ═══════════
 async function runAll(){
-  if(running) return; running=true; $('runBtn').disabled=true;
+  if(running) return; running=true; $('runBtn').disabled=true; $('regenBtn').disabled=true;
   const P=PROBLEMS[sel];
   // reset UI
   $('cands').innerHTML=''; $('boardBox').style.display='none'; $('podium').innerHTML='';
@@ -443,11 +580,22 @@ async function runAll(){
   $('lane-'+w.c.id).classList.remove('out'); $('lane-'+w.c.id).classList.add('winner');
   $('boardBox').style.display='block';
   $('deployline').style.display='block';
-  $('deployline').innerHTML=`🚀 <b>${w.c.name}</b> wins at <b>${w.score}</b> points — presented to the operator, approved, and deployed to <b>real</b> production. The reward table just taught the engine which script to trust next time.`;
-  log('DEPLOY',`winner ${w.c.name} (${w.score}) deployed to production — ranking presented (112)`,'ok');
+  const qualified = w.score > -9;
+  $('deployline').innerHTML = qualified
+    ? `🚀 <b>${w.c.name}</b> wins at <b>${w.score}</b> points and was deployed to <b>real</b> production automatically. No ticket, no approval, no operator in the path. The reward table has already updated.`
+    : `⛔ <b>No candidate qualified.</b> Best was ${w.c.name} at ${w.score}. The engine deployed nothing and escalated on its own — refusing to act is also a decision it makes unattended.`;
+  log('DEPLOY', qualified
+      ? `winner ${w.c.name} (${w.score}) deployed automatically — no operator approval (112)`
+      : `no candidate met the criteria — nothing deployed, incident escalated`, qualified?'ok':'warn');
+  TALLY.handled++;
+  if(!qualified) TALLY.refused++;
+  else if(String(w.c.origin).startsWith('knowledge base')||String(w.c.origin).startsWith('runbook')) TALLY.kb++;
+  else TALLY.outsider++;
+  renderTally();
   if(results[3]) log('LEARN',`worst: ${results[3].c.name} (${results[3].score}) — “${results[3].c.verdict}”`,'warn');
-  running=false; $('runBtn').disabled=false;
-  $('runHint').textContent='Race finished. Pick another incident or race again.';
+  running=false;
+  if(!auto){ $('runBtn').disabled=false; $('regenBtn').disabled=false;
+    $('runHint').textContent='Incident closed. Resample the feed, or hand it to autopilot.'; }
 }
 
 async function raceOne(c, delay){
@@ -477,7 +625,43 @@ async function raceOne(c, delay){
 }
 
 // init
-renderProbs();
+
+// ═══════════ AUTOPILOT — the point of the patent ═══════════
+// Incidents keep arriving. The engine scouts, races, deploys and moves on.
+// Nothing between one incident and the next waits on a person.
+async function autopilot(){
+  if(auto){ stopAuto(); return; }
+  auto=true; autoCount=0;
+  const b=$('autoBtn'); b.textContent='■ STOP AUTOPILOT'; b.classList.add('stopping'); b.classList.remove('primary');
+  $('runBtn').disabled=true; $('regenBtn').disabled=true;
+  $('runHint').innerHTML='<span class="autopulse"></span>running unattended — incidents close without approval';
+  log('AUTO','autopilot engaged — remediation now deploys without operator approval','ok');
+  while(auto){
+    regenFeed(false);
+    const keys=Object.keys(PROBLEMS);
+    sel=keys[Math.floor(rnd()*keys.length)];
+    renderProbs();
+    await runAll();
+    if(!auto) break;
+    autoCount++;
+    await sleep(1200);
+  }
+}
+function stopAuto(){
+  auto=false;
+  const b=$('autoBtn'); b.textContent='▶ AUTOPILOT — RUN UNATTENDED'; b.classList.remove('stopping'); b.classList.add('primary');
+  $('runBtn').disabled=false; $('regenBtn').disabled=false;
+  $('runHint').textContent='Autopilot stopped after '+autoCount+' unattended incidents.';
+  log('AUTO','autopilot disengaged after '+autoCount+' incidents','warn');
+}
+
+// init
+regenFeed(false); renderTally();
+setInterval(()=>{ const el=$('mintAge'); if(!el||auto) return;
+  const s=Math.floor((Date.now()-mintedAt)/1000);
+  el.textContent = s<3?'just now':s<60?s+' s ago':Math.floor(s/60)+' min ago';
+},1000);
+
 </script>
 
 <!-- ===== RETRO NAV (site-wide) ===== -->
