@@ -32,7 +32,9 @@ h1 .flag{color:var(--t2);font-weight:400}
 .checker{height:10px;max-width:340px;margin:20px auto 0;background:repeating-conic-gradient(#fff 0 90deg,#0b0e12 0 180deg) 0 0/10px 10px;border-radius:3px;opacity:.5}
 
 /* ============ SECTION SHELL ============ */
-section{margin:24px 0;border:1px solid var(--bd);border-radius:14px;background:var(--s1);overflow:hidden}
+section{margin:24px 0;border:1px solid var(--bd);border-radius:14px;background:var(--s1);overflow:hidden;transition:border-color .4s,box-shadow .4s;scroll-margin-top:14px}
+section.live{border-color:var(--green);box-shadow:0 0 0 1px rgba(47,224,140,.18)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 .sec-h{display:flex;align-items:baseline;gap:10px;padding:13px 16px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
 .sec-h .num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);background:rgba(47,224,140,.08);border:1px solid rgba(47,224,140,.3);border-radius:5px;padding:2px 8px}
 .sec-h h2{font-size:16px;font-weight:700}
@@ -185,7 +187,7 @@ footer a{color:var(--blue);text-decoration:none}
 </header>
 
 <!-- 1 · INCIDENT -->
-<section>
+<section id="sec-feed">
   <div class="sec-h"><span class="num">1</span><h2>Incident feed</h2><span class="sub">synthesised problem statements · FIG. 1 (102)</span></div>
   <div class="sec-b">
     <div class="sampler-note">
@@ -204,7 +206,7 @@ footer a{color:var(--blue);text-decoration:none}
 </section>
 
 <!-- 2 · SCOUT -->
-<section>
+<section id="sec-scout">
   <div class="sec-h"><span class="num">2</span><h2>The scout — NLP searches the knowledge base</h2><span class="sub">bag-of-words · TF-IDF · FIG. 2</span></div>
   <div class="sec-b">
     <div class="scout">
@@ -219,7 +221,7 @@ footer a{color:var(--blue);text-decoration:none}
 </section>
 
 <!-- 3 · PIT CREW -->
-<section>
+<section id="sec-pit">
   <div class="sec-h"><span class="num">3</span><h2>The pit crew — command optimization</h2><span class="sub">command mapping DB 440 · FIG. 3/4</span></div>
   <div class="sec-b">
     <div class="opt">
@@ -231,7 +233,7 @@ footer a{color:var(--blue);text-decoration:none}
 </section>
 
 <!-- 4 · RACE -->
-<section>
+<section id="sec-race">
   <div class="sec-h"><span class="num">4</span><h2>The race — reinforced learning arena</h2><span class="sub">state machine · FIG. 6 (602–626)</span></div>
   <div class="sec-b">
     <div class="arena-note">⛱ Racing happens in a <b>replica of production</b> (506) — clones get hurt, customers don't. Checkpoints (504) report each state change.</div>
@@ -261,7 +263,7 @@ footer a{color:var(--blue);text-decoration:none}
 </section>
 
 <!-- 5 · LOG -->
-<section>
+<section id="sec-log">
   <div class="sec-h"><span class="num">5</span><h2>Race control log</h2><span class="sub">checkpoints 504 · execution rules 106</span></div>
   <div class="sec-b">
     <div class="logbox" id="log"><div><span class="lt">[00:00]</span> <span class="info">CTRL</span> arena idle · knowledge base indexed · command mapping DB warm</div></div>
@@ -516,6 +518,26 @@ function laneHTML(c){
   </div>`;
 }
 
+// Follow the run: highlight the stage that is currently working and bring it
+// into view, so the browser tracks the simulation instead of leaving it
+// off-screen. Matches the behaviour of the container placement demo.
+let lastLive=null;
+function scrollToEl(id){
+  const el=$(id); if(!el) return;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({behavior: reduce?'auto':'smooth', block:'center'});
+}
+function liveSec(id){
+  if(id===lastLive) return;
+  lastLive=id;
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('live'));
+  if(!id) return;
+  const el=$(id); if(!el) return;
+  el.classList.add('live');
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({behavior: reduce?'auto':'smooth', block:'start'});
+}
+
 // ═══════════ MAIN FLOW ═══════════
 async function runAll(){
   if(running) return; running=true; $('runBtn').disabled=true; $('regenBtn').disabled=true;
@@ -525,6 +547,7 @@ async function runAll(){
   $('deployline').style.display='none'; $('mapnote').style.display='none';
   $('lanes').innerHTML='';
   // ---- SCOUT ----
+  liveSec('sec-scout');
   $('radar').classList.remove('idle');
   log('SCOUT',`problem statement received: “${P.title}” — keywords [${P.kws.join(', ')}]`,'info');
   log('SCOUT','NLP 442: bag-of-words + TF-IDF over knowledge base 444 and indexed forums','pur');
@@ -545,6 +568,7 @@ async function runAll(){
   $('radar').classList.add('idle');
   // ---- PIT CREW ----
   await sleep(400);
+  liveSec('sec-pit');
   $('optName').textContent=P.opt.script;
   const ob=$('optBody'); ob.innerHTML='';
   P.opt.lines.forEach((l,i)=>{
@@ -561,6 +585,7 @@ async function runAll(){
   log('PIT','preferable alternatives found — script modified, dependent code adjusted (316)','ok');
   await sleep(900);
   // ---- RACE ----
+  liveSec('sec-race');
   $('lanes').innerHTML=P.cands.map(laneHTML).join('');
   log('RACE','production replica 506 spun up — checkpoints 504 armed — lights out 🏁','info');
   await sleep(600);
@@ -587,6 +612,7 @@ async function runAll(){
   log('DEPLOY', qualified
       ? `winner ${w.c.name} (${w.score}) deployed automatically — no operator approval (112)`
       : `no candidate met the criteria — nothing deployed, incident escalated`, qualified?'ok':'warn');
+  scrollToEl('deployline');
   TALLY.handled++;
   if(!qualified) TALLY.refused++;
   else if(String(w.c.origin).startsWith('knowledge base')||String(w.c.origin).startsWith('runbook')) TALLY.kb++;
@@ -594,7 +620,7 @@ async function runAll(){
   renderTally();
   if(results[3]) log('LEARN',`worst: ${results[3].c.name} (${results[3].score}) — “${results[3].c.verdict}”`,'warn');
   running=false;
-  if(!auto){ $('runBtn').disabled=false; $('regenBtn').disabled=false;
+  if(!auto){ liveSec(null); $('runBtn').disabled=false; $('regenBtn').disabled=false;
     $('runHint').textContent='Incident closed. Resample the feed, or hand it to autopilot.'; }
 }
 
@@ -637,6 +663,8 @@ async function autopilot(){
   $('runHint').innerHTML='<span class="autopulse"></span>running unattended — incidents close without approval';
   log('AUTO','autopilot engaged — remediation now deploys without operator approval','ok');
   while(auto){
+    liveSec('sec-feed');
+    await sleep(500);
     regenFeed(false);
     const keys=Object.keys(PROBLEMS);
     sel=keys[Math.floor(rnd()*keys.length)];
@@ -651,6 +679,7 @@ function stopAuto(){
   auto=false;
   const b=$('autoBtn'); b.textContent='▶ AUTOPILOT — RUN UNATTENDED'; b.classList.remove('stopping'); b.classList.add('primary');
   $('runBtn').disabled=false; $('regenBtn').disabled=false;
+  liveSec(null);
   $('runHint').textContent='Autopilot stopped after '+autoCount+' unattended incidents.';
   log('AUTO','autopilot disengaged after '+autoCount+' incidents','warn');
 }
